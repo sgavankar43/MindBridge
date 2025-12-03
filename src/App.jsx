@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React from "react";
 import MemoryMatch from "./components/MemoryMatch";
 
@@ -317,7 +316,6 @@ function Placeholder2048Wrapper({ onGameOver }) {
           Copy Snippet
         </button>
       </div>
->>>>>>> f146d23 (Games)
     </div>
   );
 }
