@@ -82,47 +82,47 @@ export default function Game() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-16 p-8 pt-24"> 
+      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-24"> 
         <Header />
         
-        <div className="max-w-7xl mx-auto mt-6 ">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Games</h1>
-            <p className="text-gray-600">Select a game to start playing</p>
+        <div className="max-w-7xl mx-auto mt-4 sm:mt-6">
+          <div className="mb-4 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Games</h1>
+            <p className="text-sm sm:text-base text-gray-600">Select a game to start playing</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {games.map((game) => (
               <div 
                 key={game.id}
                 onClick={() => navigate(game.route)}
-                className="group bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                className="group bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
               >
-                <div className={`h-2 ${game.color}`}></div>
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-16 h-16 ${game.color.split(' ')[0]} rounded-xl flex items-center justify-center mb-4`}>
-                      {game.icon}
+                <div className={`h-1.5 sm:h-2 ${game.color}`}></div>
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className={`w-12 h-12 sm:w-16 sm:h-16 ${game.color.split(' ')[0]} rounded-lg sm:rounded-xl flex items-center justify-center`}>
+                      <div className="scale-75 sm:scale-100">{game.icon}</div>
                     </div>
-                    <div className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-700">
+                    <div className="px-2 sm:px-3 py-1 bg-gray-100 rounded-full text-xs sm:text-sm font-medium text-gray-700">
                       {game.stats[0].value}
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{game.title}</h3>
-                  <p className="text-gray-600 mb-4">{game.description}</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{game.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 line-clamp-2">{game.description}</p>
                   
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
-                    <div className="flex items-center space-x-4">
+                  <div className="flex items-center justify-between mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-2 sm:space-x-4">
                       {game.stats.slice(1).map((stat, index) => (
-                        <div key={index} className="flex items-center text-sm text-gray-500">
-                          {stat.label === "Time" ? <Clock className="w-4 h-4 mr-1" /> : null}
-                          {stat.label === "Players" ? <Users className="w-4 h-4 mr-1" /> : null}
+                        <div key={index} className="flex items-center text-xs sm:text-sm text-gray-500">
+                          {stat.label === "Time" ? <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1" /> : null}
+                          {stat.label === "Players" ? <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1" /> : null}
                           {stat.value}
                         </div>
                       ))}
                     </div>
                     <button 
-                      className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-900 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(game.route);
@@ -137,22 +137,22 @@ export default function Game() {
           </div>
           
           {/* Coming Soon Section */}
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Coming Soon</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="mt-8 sm:mt-16">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Coming Soon</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {[1, 2].map((item) => (
                 <div 
                   key={item}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-dashed border-gray-200 opacity-50"
+                  className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden border-2 border-dashed border-gray-200 opacity-50"
                 >
-                  <div className="h-2 bg-gray-200"></div>
-                  <div className="p-6">
-                    <div className="w-16 h-16 bg-gray-200 rounded-xl mb-4"></div>
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                    <div className="h-4 bg-gray-100 rounded w-full mb-2"></div>
-                    <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-                    <div className="mt-6 pt-4 border-t border-gray-100">
-                      <div className="h-8 bg-gray-200 rounded w-32"></div>
+                  <div className="h-1.5 sm:h-2 bg-gray-200"></div>
+                  <div className="p-4 sm:p-6">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-lg sm:rounded-xl mb-3 sm:mb-4"></div>
+                    <div className="h-5 sm:h-6 bg-gray-200 rounded w-3/4 mb-3 sm:mb-4"></div>
+                    <div className="h-3 sm:h-4 bg-gray-100 rounded w-full mb-2"></div>
+                    <div className="h-3 sm:h-4 bg-gray-100 rounded w-5/6"></div>
+                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
+                      <div className="h-7 sm:h-8 bg-gray-200 rounded w-24 sm:w-32"></div>
                     </div>
                   </div>
                 </div>

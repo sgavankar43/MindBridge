@@ -13,18 +13,18 @@ export default function Dashboard() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-16 p-8 pt-24"> 
+      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-24"> 
         <Header />
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-12 gap-6 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mt-4 sm:mt-8">
 
-          <div className="col-span-4">
+          <div className="lg:col-span-4">
             <TodayActivity />
           </div>
 
-          <div className="col-span-8 space-y-6">
-            <div className="flex gap-6">
+          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
               <ProgressStatistics />
               <CaloriesCard />
             </div>

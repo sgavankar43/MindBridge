@@ -20,12 +20,12 @@ export function TodayActivity() {
   return (
     <div className="relative">
       {/* Add Button - Positioned outside the masked container */}
-      <button className="absolute top-0 right-1 z-10 w-12 h-12 bg-[#e74c3c] rounded-xl flex items-center justify-center shadow-lg hover:bg-[#c0392b] transition-colors">
-        <span className="text-white text-2xl font-light leading-none">+</span>
+      <button className="absolute top-0 right-1 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-[#e74c3c] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg hover:bg-[#c0392b] transition-colors">
+        <span className="text-white text-xl sm:text-2xl font-light leading-none">+</span>
       </button>
 
       <div
-        className="bg-white rounded-3xl p-6 h-full relative"
+        className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 h-full relative"
         style={{
           '--r': '20px',
           '--s': '30px',
@@ -39,12 +39,12 @@ export function TodayActivity() {
         }}
       >
 
-        <h2 className="text-sm font-medium text-gray-500 mb-4">TODAY&apos;S ACTIVITY</h2>
+        <h2 className="text-xs sm:text-sm font-medium text-gray-500 mb-3 sm:mb-4">TODAY&apos;S ACTIVITY</h2>
 
         {/* Activity Ring */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4 sm:mb-6">
           <div className="relative">
-            <svg width="160" height="100" viewBox="0 0 160 100">
+            <svg className="w-32 h-20 sm:w-40 sm:h-24" viewBox="0 0 160 100">
               <defs>
                 <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#f39c12" />
@@ -79,28 +79,28 @@ export function TodayActivity() {
         </div>
 
         {/* Week Days */}
-        <div className="flex justify-between mb-6 px-2">
+        <div className="flex justify-between mb-4 sm:mb-6 px-1 sm:px-2">
           {weekDays.map((item, index) => (
-            <div key={index} className="flex flex-col items-center gap-2">
-              <span className="text-xs text-gray-400">{item.day}</span>
+            <div key={index} className="flex flex-col items-center gap-1 sm:gap-2">
+              <span className="text-[10px] sm:text-xs text-gray-400">{item.day}</span>
               {item.completed ? (
-                <div className="w-8 h-8 bg-[#f5f0e8] rounded-full flex items-center justify-center">
-                  <Check className="w-4 h-4 text-[#2d2d2d]" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#f5f0e8] rounded-full flex items-center justify-center">
+                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-[#2d2d2d]" />
                 </div>
               ) : item.active ? (
-                <div className="w-8 h-8 bg-[#f1e14c] rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#f1e14c] rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-[#2d2d2d]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
                   </svg>
                 </div>
               ) : (
-                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded-full flex items-center justify-center">
                   {item.icon === "running" ? (
-                    <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
                     </svg>
                   ) : (
-                    <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M6 3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H6z" />
                     </svg>
                   )}
@@ -111,25 +111,25 @@ export function TodayActivity() {
         </div>
 
         {/* Upcoming Workouts */}
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-medium text-gray-500">UPCOMING WORKOUTS</h3>
-            <button className="text-xs text-gray-400">View All</button>
+        <div className="mb-3 sm:mb-4">
+          <div className="flex justify-between items-center mb-2 sm:mb-3">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500">UPCOMING WORKOUTS</h3>
+            <button className="text-[10px] sm:text-xs text-gray-400">View All</button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {workouts.map((workout, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
-                <div className={`w-12 h-12 ${workout.color} rounded-xl flex items-center justify-center`}>
-                  <span className="text-white text-xl">💪</span>
+              <div key={index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-xl sm:rounded-2xl">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 ${workout.color} rounded-lg sm:rounded-xl flex items-center justify-center shrink-0`}>
+                  <span className="text-white text-base sm:text-xl">💪</span>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-[#2d2d2d]">{workout.name}</h4>
-                  <p className="text-xs text-gray-400">{workout.duration}</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-[#2d2d2d] text-sm sm:text-base truncate">{workout.name}</h4>
+                  <p className="text-[10px] sm:text-xs text-gray-400">{workout.duration}</p>
                 </div>
-                <span className="text-xs text-gray-400">{workout.date}</span>
-                <button>
-                  <MoreHorizontal className="w-5 h-5 text-gray-400" />
+                <span className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">{workout.date}</span>
+                <button className="shrink-0">
+                  <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 </button>
               </div>
             ))}
@@ -137,20 +137,20 @@ export function TodayActivity() {
         </div>
 
         {/* Steps */}
-        <div className="flex items-end justify-between mt-6">
+        <div className="flex items-end justify-between mt-4 sm:mt-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">STEPS</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">STEPS</h3>
             <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold text-[#2d2d2d]">11.000</span>
-              <span className="text-sm text-gray-400">/steps</span>
+              <span className="text-2xl sm:text-4xl font-bold text-[#2d2d2d]">11.000</span>
+              <span className="text-xs sm:text-sm text-gray-400">/steps</span>
             </div>
-            <div className="w-32 h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
-              <div className="h-full w-3/4 bg-gradient-to-r from-[#f39c12] to-[#e74c3c] rounded-full" />
+            <div className="w-24 sm:w-32 h-1.5 sm:h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
+              <div className="h-full w-3/4 bg-[#e74c3c] rounded-full" />
             </div>
           </div>
           <div className="text-right">
-            <span className="text-xs text-gray-400">Daily Goal</span>
-            <p className="text-sm font-medium">15.000 /steps</p>
+            <span className="text-[10px] sm:text-xs text-gray-400">Daily Goal</span>
+            <p className="text-xs sm:text-sm font-medium">15.000 /steps</p>
           </div>
         </div>
       </div>
