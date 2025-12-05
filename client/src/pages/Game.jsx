@@ -77,14 +77,14 @@ export default function Game() {
 
   return (
     <div className="flex min-h-screen bg-[#f5f0e8]">
-      
+
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-24"> 
+      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-28">
         <Header />
-        
+
         <div className="max-w-7xl mx-auto mt-4 sm:mt-6">
           <div className="mb-4 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Games</h1>
@@ -93,7 +93,7 @@ export default function Game() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {games.map((game) => (
-              <div 
+              <div
                 key={game.id}
                 onClick={() => navigate(game.route)}
                 className="group bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
@@ -110,7 +110,7 @@ export default function Game() {
                   </div>
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{game.title}</h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 line-clamp-2">{game.description}</p>
-                  
+
                   <div className="flex items-center justify-between mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-100">
                     <div className="flex items-center space-x-2 sm:space-x-4">
                       {game.stats.slice(1).map((stat, index) => (
@@ -121,7 +121,7 @@ export default function Game() {
                         </div>
                       ))}
                     </div>
-                    <button 
+                    <button
                       className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-900 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -135,13 +135,13 @@ export default function Game() {
               </div>
             ))}
           </div>
-          
+
           {/* Coming Soon Section */}
           <div className="mt-8 sm:mt-16">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Coming Soon</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {[1, 2].map((item) => (
-                <div 
+                <div
                   key={item}
                   className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden border-2 border-dashed border-gray-200 opacity-50"
                 >

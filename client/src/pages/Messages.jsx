@@ -151,9 +151,8 @@ export default function Messages() {
               <button
                 key={user.id}
                 onClick={() => handleUserSelect(user)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-gray-100 text-left ${
-                  selectedUser?.id === user.id ? 'bg-gray-100' : ''
-                }`}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-gray-100 text-left ${selectedUser?.id === user.id ? 'bg-gray-100' : ''
+                  }`}
               >
                 <div className="relative">
                   <div className={`w-12 h-12 ${user.color} rounded-full flex items-center justify-center`}>
@@ -243,11 +242,10 @@ export default function Messages() {
               messages.map((message) => (
                 <div key={message.id} className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}>
                   <div className="max-w-[75%] md:max-w-[60%]">
-                    <div className={`px-4 py-2.5 rounded-2xl ${
-                      message.sent
+                    <div className={`px-4 py-2.5 rounded-2xl ${message.sent
                         ? 'bg-[#e74c3c] text-white rounded-br-sm'
                         : 'bg-gray-100 text-[#2d2d2d] rounded-bl-sm'
-                    }`}>
+                      }`}>
                       <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                     </div>
                     <span className={`text-xs text-gray-400 mt-1 px-1 block ${message.sent ? 'text-right' : 'text-left'}`}>
@@ -304,10 +302,10 @@ export default function Messages() {
   return (
     <div className="flex min-h-screen bg-[#f5f0e8]">
       <Sidebar />
-      
-      <div className="flex-1 lg:ml-16 p-4 md:p-6 lg:p-8 pt-24">
+
+      <div className="flex-1 lg:ml-16 p-4 md:p-6 lg:p-8 pt-28">
         <Header />
-        
+
         {/* Chat Container - matches ChatPage pattern */}
         <div className="flex h-[calc(100vh-120px)] w-full overflow-hidden rounded-2xl shadow-sm">
           {/* Desktop: Always show sidebar */}

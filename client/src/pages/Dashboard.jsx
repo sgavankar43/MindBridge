@@ -8,12 +8,12 @@ import { Header } from "@/components/header"
 export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-[#f5f0e8]">
-      
+
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-24"> 
+      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-28">
         <Header />
 
         {/* Dashboard Grid */}

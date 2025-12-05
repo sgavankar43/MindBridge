@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
-import { 
-  Mail, Phone, Linkedin, Github, Globe, 
-  Camera, Edit2, MapPin, Briefcase, 
+import {
+  Mail, Phone, Linkedin, Github, Globe,
+  Camera, Edit2, MapPin, Briefcase,
   Award, Target, CheckCircle, Shield
 } from "lucide-react"
 
@@ -30,13 +30,13 @@ export default function Profile() {
   return (
     <div className="flex min-h-screen bg-[#f5f0e8]">
       <Sidebar />
-      
-      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-24">
+
+      <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-28">
         <Header />
-        
+
         <div className="mt-4 sm:mt-8">
           <h2 className="text-xl sm:text-2xl font-bold text-[#2d2d2d] mb-4 sm:mb-6">Profile Settings</h2>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Left Panel - Profile Card */}
             <div className="lg:col-span-4">
@@ -51,12 +51,12 @@ export default function Profile() {
                       <Camera className="w-4 h-4 text-gray-600" />
                     </button>
                   </div>
-                  
+
                   <h3 className="text-xl font-bold text-[#2d2d2d] mb-1">John Doe</h3>
                   <p className="text-sm text-gray-500 mb-4">Senior Product Designer</p>
-                  
+
                   <div className="w-full h-px bg-gray-100 my-4" />
-                  
+
                   {/* Contact Info */}
                   <div className="w-full space-y-3 mb-6">
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
@@ -68,7 +68,7 @@ export default function Profile() {
                         <p className="text-sm text-[#2d2d2d] truncate">john.doe@example.com</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
                         <Phone className="w-4 h-4 text-gray-600" />
@@ -79,9 +79,9 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="w-full h-px bg-gray-100 my-4" />
-                  
+
                   {/* Social Links */}
                   <div className="w-full">
                     <h4 className="text-xs font-medium text-gray-400 mb-3">SOCIAL LINKS</h4>
@@ -92,14 +92,14 @@ export default function Profile() {
                         </div>
                         <span className="text-sm text-[#2d2d2d]">LinkedIn</span>
                       </a>
-                      
+
                       <a href="#" className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
                         <div className="w-8 h-8 bg-[#333] rounded-lg flex items-center justify-center">
                           <Github className="w-4 h-4 text-white" />
                         </div>
                         <span className="text-sm text-[#2d2d2d]">GitHub</span>
                       </a>
-                      
+
                       <a href="#" className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
                         <div className="w-8 h-8 bg-[#3498db] rounded-lg flex items-center justify-center">
                           <Globe className="w-4 h-4 text-white" />
@@ -121,11 +121,10 @@ export default function Profile() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex-1 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-                        activeTab === tab.id
+                      className={`flex-1 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
                           ? 'bg-[#e74c3c] text-white shadow-sm'
                           : 'text-gray-600 hover:text-[#2d2d2d]'
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -151,7 +150,7 @@ export default function Profile() {
                             </span>
                           </button>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-xs text-gray-400 mb-2 block">Full Name</label>
@@ -165,7 +164,7 @@ export default function Profile() {
                               <p className="text-sm text-[#2d2d2d] font-medium">John Doe</p>
                             )}
                           </div>
-                          
+
                           <div>
                             <label className="text-xs text-gray-400 mb-2 block">Email Address</label>
                             {isEditing.personal ? (
@@ -178,7 +177,7 @@ export default function Profile() {
                               <p className="text-sm text-[#2d2d2d] font-medium">john.doe@example.com</p>
                             )}
                           </div>
-                          
+
                           <div>
                             <label className="text-xs text-gray-400 mb-2 block">Phone Number</label>
                             {isEditing.personal ? (
@@ -191,7 +190,7 @@ export default function Profile() {
                               <p className="text-sm text-[#2d2d2d] font-medium">+1 (555) 123-4567</p>
                             )}
                           </div>
-                          
+
                           <div>
                             <label className="text-xs text-gray-400 mb-2 block">Location</label>
                             {isEditing.personal ? (
@@ -224,7 +223,7 @@ export default function Profile() {
                             </span>
                           </button>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                           <div>
                             <label className="text-xs text-gray-400 mb-2 block">Company Name</label>
@@ -241,7 +240,7 @@ export default function Profile() {
                               </div>
                             )}
                           </div>
-                          
+
                           <div>
                             <label className="text-xs text-gray-400 mb-2 block">Industry</label>
                             {isEditing.business ? (
@@ -254,7 +253,7 @@ export default function Profile() {
                               <p className="text-sm text-[#2d2d2d] font-medium">Technology & Software</p>
                             )}
                           </div>
-                          
+
                           <div className="sm:col-span-2">
                             <label className="text-xs text-gray-400 mb-2 block">Experience</label>
                             {isEditing.business ? (
@@ -268,7 +267,7 @@ export default function Profile() {
                             )}
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="text-xs text-gray-400 mb-2 block">About Company</label>
                           {isEditing.business ? (
@@ -279,7 +278,7 @@ export default function Profile() {
                             />
                           ) : (
                             <p className="text-sm text-gray-600 leading-relaxed">
-                              Leading technology company focused on innovative solutions for modern businesses. 
+                              Leading technology company focused on innovative solutions for modern businesses.
                               Specializing in SaaS products and digital transformation.
                             </p>
                           )}
@@ -293,7 +292,7 @@ export default function Profile() {
                     <div className="space-y-6 animate-fadeIn">
                       <div className="bg-gray-50 rounded-2xl p-6">
                         <h3 className="text-lg font-semibold text-[#2d2d2d] mb-6">Verification Status</h3>
-                        
+
                         <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-white rounded-xl">
                             <div className="flex items-center gap-3">
@@ -309,7 +308,7 @@ export default function Profile() {
                               Verified
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between p-4 bg-white rounded-xl">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
@@ -324,7 +323,7 @@ export default function Profile() {
                               Verified
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between p-4 bg-white rounded-xl">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -341,19 +340,19 @@ export default function Profile() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-2xl p-6">
                         <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">KYC Documents</h3>
                         <p className="text-sm text-gray-600 mb-4">
                           Upload your documents to complete the KYC verification process.
                         </p>
-                        
+
                         <div className="space-y-3">
                           <button className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-[#e74c3c] transition-colors">
                             <p className="text-sm text-gray-600">Click to upload Government ID</p>
                             <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
                           </button>
-                          
+
                           <button className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-[#e74c3c] transition-colors">
                             <p className="text-sm text-gray-600">Click to upload Proof of Address</p>
                             <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
@@ -374,20 +373,20 @@ export default function Profile() {
                             <span className="text-sm text-gray-600">Edit</span>
                           </button>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-2">
-                          {['UI/UX Design', 'Product Strategy', 'Figma', 'Adobe XD', 'Prototyping', 
+                          {['UI/UX Design', 'Product Strategy', 'Figma', 'Adobe XD', 'Prototyping',
                             'User Research', 'Wireframing', 'Design Systems'].map((skill, idx) => (
-                            <span
-                              key={idx}
-                              className="px-4 py-2 bg-white text-sm text-[#2d2d2d] rounded-xl"
-                            >
-                              {skill}
-                            </span>
-                          ))}
+                              <span
+                                key={idx}
+                                className="px-4 py-2 bg-white text-sm text-[#2d2d2d] rounded-xl"
+                              >
+                                {skill}
+                              </span>
+                            ))}
                         </div>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-2xl p-6">
                         <div className="flex items-center justify-between mb-6">
                           <h3 className="text-lg font-semibold text-[#2d2d2d]">Focus Areas</h3>
@@ -396,7 +395,7 @@ export default function Profile() {
                             <span className="text-sm text-gray-600">Edit</span>
                           </button>
                         </div>
-                        
+
                         <div className="space-y-4">
                           <div className="flex items-start gap-3 p-4 bg-white rounded-xl">
                             <div className="w-10 h-10 bg-[#e74c3c] rounded-xl flex items-center justify-center flex-shrink-0">
@@ -409,7 +408,7 @@ export default function Profile() {
                               </p>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-start gap-3 p-4 bg-white rounded-xl">
                             <div className="w-10 h-10 bg-[#3498db] rounded-xl flex items-center justify-center flex-shrink-0">
                               <Award className="w-5 h-5 text-white" />
@@ -423,10 +422,10 @@ export default function Profile() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-2xl p-6">
                         <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">Certifications</h3>
-                        
+
                         <div className="space-y-3">
                           <div className="flex items-center justify-between p-4 bg-white rounded-xl">
                             <div>
@@ -435,7 +434,7 @@ export default function Profile() {
                             </div>
                             <CheckCircle className="w-5 h-5 text-green-600" />
                           </div>
-                          
+
                           <div className="flex items-center justify-between p-4 bg-white rounded-xl">
                             <div>
                               <p className="text-sm font-medium text-[#2d2d2d]">Certified Scrum Product Owner</p>
@@ -453,7 +452,7 @@ export default function Profile() {
           </div>
         </div>
       </div>
-      
+
       <style jsx>{`
         @keyframes fadeIn {
           from {
