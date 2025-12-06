@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
-import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause } from "lucide-react"
+import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause, Heart, MessageCircle } from "lucide-react"
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+
   // Task Manager State
   const [tasks, setTasks] = useState([
     { id: 1, text: "Morning meditation", completed: true },
@@ -71,6 +74,40 @@ export default function Dashboard() {
 
   const completedTasks = tasks.filter(t => t.completed).length
 
+  // Community Updates State
+  const communityUpdates = [
+    {
+      id: 1,
+      author: "Dr. Sarah Mitchell",
+      avatar: "SM",
+      color: "bg-purple-500",
+      content: "New mindfulness workshop starting next week! Join us for daily sessions.",
+      likes: 45,
+      comments: 12,
+      time: "2h ago"
+    },
+    {
+      id: 2,
+      author: "Alex Thompson",
+      avatar: "AT",
+      color: "bg-blue-500",
+      content: "Just completed my 30-day meditation streak! Feeling amazing 🎉",
+      likes: 89,
+      comments: 24,
+      time: "5h ago"
+    },
+    {
+      id: 3,
+      author: "Emma Wilson",
+      avatar: "EW",
+      color: "bg-green-500",
+      content: "Remember: Progress, not perfection. Every small step counts! 💪",
+      likes: 156,
+      comments: 31,
+      time: "1d ago"
+    }
+  ]
+
   return (
     <div className="flex min-h-screen bg-[#f5f0e8]">
       <Sidebar />
@@ -82,10 +119,10 @@ export default function Dashboard() {
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mt-4 sm:mt-8">
 
-          {/* Task Manager */}
-          <div className="lg:col-span-4">
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm"
-              style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
+          {/* Left Column - Task Manager & Community Updates */}
+          <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+            {/* Task Manager */}
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg sm:text-xl font-bold text-[#2d2d2d]">Today's Tasks</h2>
                 <div className="px-3 py-1 bg-[#e74c3c] text-white rounded-full text-xs sm:text-sm font-medium">
@@ -133,7 +170,7 @@ export default function Dashboard() {
               </div>
 
               {/* Task List */}
-              <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100% - 220px)' }}>
+              <div className="space-y-2 overflow-y-auto max-h-64">
                 {tasks.map((task) => (
                   <div
                     key={task.id}
@@ -168,8 +205,64 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+
+            {/* Community Updates */}
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg sm:text-xl font-bold text-[#2d2d2d]">Community Updates</h2>
+                <button
+                  onClick={() => navigate('/community')}
+                  className="text-xs text-[#e74c3c] font-medium hover:text-[#c0392b] transition-colors"
+                >
+                  View All
+                </button>
+              </div>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {communityUpdates.map((update) => (
+                  <div
+                    key={update.id}
+                    onClick={() => navigate('/community')}
+                    className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start gap-3 mb-2">
+                      <div className={`w-10 h-10 ${update.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <span className="text-white font-bold text-xs">{update.avatar}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-[#2d2d2d] truncate">
+                          {update.author}
+                        </h4>
+                        <p className="text-xs text-gray-400">{update.time}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {update.content}
+                    </p>
+                    <div className="flex items-center gap-4 text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" />
+                        <span className="text-xs">{update.likes}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="w-4 h-4" />
+                        <span className="text-xs">{update.comments}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => navigate('/community')}
+                className="w-full mt-4 px-4 py-2 bg-[#e74c3c] text-white rounded-xl font-medium hover:bg-[#c0392b] transition-colors text-sm"
+              >
+                Go to Community
+              </button>
+            </div>
           </div>
 
+          {/* Right Column - Streak, Mood & Videos */}
           <div className="lg:col-span-8 space-y-4 sm:space-y-6">
             {/* Streak Manager & Mood Tracker */}
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
