@@ -27,11 +27,11 @@ export function Sidebar() {
   const items = [
     { path: "/dashboard", icon: Home, label: "Dashboard" },
     { path: "/home", icon: LayoutGrid, label: "Home" },
-    { path: "/messages", icon: MessageCircle, label: "Messages" },
+    { path: "/ai-chat", icon: MessageCircle, label: "AI Chat" },
     { path: "/profile", icon: User, label: "Profile" },
     { path: "/game", icon: Gamepad2, label: "Games", active: isActiveGame },
     { path: "/calendar", icon: Calendar, label: "Calendar" },
-    { path: "/users", icon: Users, label: "Users" },
+    { path: "/community", icon: Users, label: "Community" },
     { path: "/favorites", icon: Heart, label: "Favorites" },
     { path: "/time", icon: Clock, label: "Time" },
   ];
