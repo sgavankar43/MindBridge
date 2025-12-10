@@ -1,18 +1,27 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
+import { useUser } from "../context/UserContext"
 import {
   Mail, Phone, Linkedin, Github, Globe,
   Camera, Edit2, MapPin, Briefcase,
-  Award, Target, CheckCircle, Shield
+  Award, Target, CheckCircle, Shield, Settings
 } from "lucide-react"
 
 export default function Profile() {
+  const navigate = useNavigate()
+  const { user } = useUser()
   const [activeTab, setActiveTab] = useState("personal")
   const [isEditing, setIsEditing] = useState({
     personal: false,
     business: false
   })
+
+  const getUserInitials = () => {
+    if (!user?.name) return 'U'
+    return user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
 
   const tabs = [
     { id: "personal", label: "Personal & Business" },
@@ -35,7 +44,16 @@ export default function Profile() {
         <Header />
 
         <div className="mt-4 sm:mt-8">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#2d2d2d] mb-4 sm:mb-6">Profile Settings</h2>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#2d2d2d]">Profile Settings</h2>
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-2 px-4 py-2 bg-[#e74c3c] text-white rounded-xl font-medium hover:bg-[#c0392b] transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
             {/* Left Panel - Profile Card */}
@@ -45,15 +63,17 @@ export default function Profile() {
                 <div className="flex flex-col items-center mb-6">
                   <div className="relative mb-4">
                     <div className="w-32 h-32 bg-[#e74c3c] rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-4xl">JD</span>
+                      <span className="text-white font-bold text-4xl">{getUserInitials()}</span>
                     </div>
                     <button className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-colors border-2 border-[#f5f0e8]">
                       <Camera className="w-4 h-4 text-gray-600" />
                     </button>
                   </div>
 
-                  <h3 className="text-xl font-bold text-[#2d2d2d] mb-1">John Doe</h3>
-                  <p className="text-sm text-gray-500 mb-4">Senior Product Designer</p>
+                  <h3 className="text-xl font-bold text-[#2d2d2d] mb-1">{user?.name || 'User'}</h3>
+                  <p className="text-sm text-gray-500 mb-4 capitalize">
+                    {user?.profession || user?.role || 'MindBridge Member'}
+                  </p>
 
                   <div className="w-full h-px bg-gray-100 my-4" />
 
@@ -65,7 +85,7 @@ export default function Profile() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-400">Email</p>
-                        <p className="text-sm text-[#2d2d2d] truncate">john.doe@example.com</p>
+                        <p className="text-sm text-[#2d2d2d] truncate">{user?.email || 'No email provided'}</p>
                       </div>
                     </div>
 
@@ -75,7 +95,7 @@ export default function Profile() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-400">Phone</p>
-                        <p className="text-sm text-[#2d2d2d]">+1 (555) 123-4567</p>
+                        <p className="text-sm text-[#2d2d2d]">{user?.phone || 'No phone provided'}</p>
                       </div>
                     </div>
                   </div>
@@ -122,8 +142,8 @@ export default function Profile() {
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex-1 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
-                          ? 'bg-[#e74c3c] text-white shadow-sm'
-                          : 'text-gray-600 hover:text-[#2d2d2d]'
+                        ? 'bg-[#e74c3c] text-white shadow-sm'
+                        : 'text-gray-600 hover:text-[#2d2d2d]'
                         }`}
                     >
                       {tab.label}
