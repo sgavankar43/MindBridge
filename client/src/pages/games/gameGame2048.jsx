@@ -1,6 +1,6 @@
 import React from "react";
 import { Sidebar } from "@/components/sidebar";
-import { Header } from "@/components/header";
+import { Header } from "@/components/Header";
 import Game2048 from "@/components/Game2048";
 
 export default function GameGame2048() {

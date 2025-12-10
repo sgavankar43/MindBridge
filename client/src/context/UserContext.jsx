@@ -49,6 +49,14 @@ export const UserProvider = ({ children }) => {
     }, [])
 
     const login = (userData, token) => {
+        // Check verification status for therapists
+        if (userData.role === 'therapist' && userData.verificationStatus === 'pending') {
+            // We store the token to allow basic profile access if needed,
+            // but the UI should redirect them.
+            // However, typically we might not even want to log them in fully if pending.
+            // For this requirement, we'll store it but components will check status.
+        }
+
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(userData))
         setUser(userData)

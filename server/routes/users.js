@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
+const userController = require('../controllers/userController');
 
-// Test route
-router.get('/test', (req, res) => {
-    console.log('✅ Users test route hit');
-    res.json({ message: 'Users routes working!' });
-});
+// Search users
+router.get('/search', authenticateToken, userController.searchUsers);
+
+// Get user profile (public info + posts + comments)
+router.get('/:id/profile', authenticateToken, userController.getProfile);
+
+// Follow/Unfollow
+router.put('/:id/follow', authenticateToken, userController.toggleFollow);
 
 module.exports = router;

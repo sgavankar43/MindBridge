@@ -44,7 +44,12 @@ export default function Login() {
         navigate('/dashboard')
       }, 500)
     } catch (error) {
-      setError(error.message || 'Login failed')
+      // Check for specific verification error
+      if (error.status === 403 && error.verificationStatus) {
+        setError(`Account is ${error.verificationStatus}. Please wait for admin approval.`)
+      } else {
+        setError(error.message || 'Login failed')
+      }
     } finally {
       setIsLoading(false)
     }

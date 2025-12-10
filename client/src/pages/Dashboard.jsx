@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
+import { Header } from "@/components/Header"
 import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause, Heart, MessageCircle } from "lucide-react"
 
 export default function Dashboard() {

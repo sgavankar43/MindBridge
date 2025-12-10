@@ -41,7 +41,11 @@ export const apiRequest = async (url, options = {}) => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'API request failed');
+            const error = new Error(data.message || 'API request failed');
+            error.status = response.status;
+            // Pass through any additional data from the response (like verificationStatus)
+            Object.assign(error, data);
+            throw error;
         }
 
         return data;

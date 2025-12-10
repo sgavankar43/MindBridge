@@ -53,6 +53,45 @@ const userSchema = new mongoose.Schema({
         type: String
     }],
 
+    // Therapist Verification
+    verificationStatus: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected', 'none'],
+        default: 'none'
+    },
+    verificationDocuments: [{
+        type: String // URLs to uploaded documents
+    }],
+    licenseNumber: {
+        type: String,
+        default: null
+    },
+
+    // Searchable Fields
+    location: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    consultationFees: {
+        type: Number,
+        default: null
+    },
+    languages: [{
+        type: String,
+        trim: true
+    }],
+
+    // Social
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    following: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+
     // Account Settings
     isEmailVerified: {
         type: Boolean,
