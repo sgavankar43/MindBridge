@@ -3,6 +3,8 @@ import { SidebarProvider } from './context/SidebarContext'
 import { UserProvider, useUser } from './context/UserContext'
 import Login from './pages/Login'
 import Registration from './pages/Registration'
+import VerificationPending from './pages/VerificationPending'
+import AdminDashboard from './pages/AdminDashboard'
 import NotFound from './pages/NotFound'
 
 import Dashboard from './pages/Dashboard'
@@ -75,6 +77,7 @@ function AppRoutes() {
         {/* Public Routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/registration" element={<PublicRoute><Registration /></PublicRoute>} />
+        <Route path="/verification-pending" element={<VerificationPending />} />
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -84,6 +87,7 @@ function AppRoutes() {
         <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />
         <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/gameMemoryMatch" element={<ProtectedRoute><GameMemoryMatch /></ProtectedRoute>} />
         <Route path="/gameBubblePop" element={<ProtectedRoute><GameBubblePop /></ProtectedRoute>} />
         <Route path="/gameTileSlider" element={<ProtectedRoute><GameTileSlider /></ProtectedRoute>} />

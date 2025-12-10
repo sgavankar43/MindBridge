@@ -1,0 +1,21 @@
+
+> client@0.0.0 dev
+> vite --port 5173
+
+
+  VITE v7.2.4  ready in 1046 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+12:45:00 PM [vite] (client) warning: This assignment will throw because "newG" is a constant
+129 |
+130 |        // rotate back counter-clockwise (3 times clockwise) to original orientation
+131 |        for (let i = 0; i < (4 - dir) % 4; i++) newG = rotateClockwise(newG);
+    |                                                ^
+132 |
+133 |        if (moved) {
+
+  Plugin: vite:esbuild
+  File: /app/client/src/components/Game2048.jsx
+12:55:19 PM [vite] (client) hmr update /src/pages/Login.jsx, /src/index.css
+12:56:45 PM [vite] (client) hmr update /src/context/UserContext.jsx, /src/pages/Login.jsx, /src/pages/Registration.jsx, /src/pages/AdminDashboard.jsx, /src/pages/Profile.jsx, /src/pages/Community.jsx, /src/index.css

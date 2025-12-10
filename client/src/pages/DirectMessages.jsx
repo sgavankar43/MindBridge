@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
+import { Header } from "@/components/Header"
 import { Search, Send, Paperclip, Smile, MoreVertical, Phone, Video, ArrowLeft } from "lucide-react"
 
 // Dummy data

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
+import { Header } from "@/components/Header"
 import {
     User, Bell, Shield, Palette, Globe, Moon, Sun,
     Monitor, Volume2, VolumeX, Eye, EyeOff, Save,
