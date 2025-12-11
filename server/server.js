@@ -80,6 +80,22 @@ try {
     console.error('❌ Error loading admin routes:', error.message);
 }
 
+try {
+    const chatRoutes = require('./routes/chatRoutes');
+    app.use('/api/chat', chatRoutes);
+    console.log('✅ Chat routes loaded');
+} catch (error) {
+    console.error('❌ Error loading chat routes:', error.message);
+}
+
+try {
+    const aiRoutes = require('./routes/aiRoutes');
+    app.use('/api/ai', aiRoutes);
+    console.log('✅ AI routes loaded');
+} catch (error) {
+    console.error('❌ Error loading AI routes:', error.message);
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({

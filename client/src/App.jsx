@@ -9,6 +9,7 @@ import NotFound from './pages/NotFound'
 
 import Dashboard from './pages/Dashboard'
 import Messages from './pages/Messages'
+import AITherapist from './pages/AITherapist'
 import DirectMessages from './pages/DirectMessages'
 import Profile from './pages/Profile'
 import Game from './pages/Game'
@@ -81,7 +82,7 @@ function AppRoutes() {
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/ai-chat" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/ai-chat" element={<ProtectedRoute><AITherapist /></ProtectedRoute>} />
         <Route path="/direct-messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />

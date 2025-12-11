@@ -27,7 +27,8 @@ export function Sidebar() {
   const items = [
     { path: "/dashboard", icon: Home, label: "Dashboard" },
     { path: "/home", icon: LayoutGrid, label: "Home" },
-    { path: "/ai-chat", icon: MessageCircle, label: "AI Chat" },
+    { path: "/ai-chat", icon: MessageCircle, label: "AI Therapist" },
+    { path: "/direct-messages", icon: MessageCircle, label: "Messages" },
     { path: "/profile", icon: User, label: "Profile" },
     { path: "/game", icon: Gamepad2, label: "Games", active: isActiveGame },
     { path: "/calendar", icon: Calendar, label: "Calendar" },

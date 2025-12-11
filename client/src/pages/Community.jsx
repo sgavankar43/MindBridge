@@ -352,12 +352,20 @@ export default function Community() {
                                                     {u.location && <p className="text-xs text-gray-400">{u.location}</p>}
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => navigate(`/profile?id=${u._id}`)}
-                                                className="px-4 py-2 border border-[#e74c3c] text-[#e74c3c] rounded-xl hover:bg-red-50 transition-colors"
-                                            >
-                                                View Profile
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => navigate('/direct-messages', { state: { targetUser: u } })}
+                                                    className="px-4 py-2 bg-[#e74c3c] text-white rounded-xl hover:bg-[#c0392b] transition-colors"
+                                                >
+                                                    Message
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/profile?id=${u._id}`)}
+                                                    className="px-4 py-2 border border-[#e74c3c] text-[#e74c3c] rounded-xl hover:bg-red-50 transition-colors"
+                                                >
+                                                    View Profile
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
