@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const AISession = require('../models/AISession');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const auth = require('../middleware/auth'); // Assuming you have an auth middleware
+const { authenticateToken } = require('../middleware/auth');
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -14,10 +14,10 @@ Always encourage professional help if the user seems in crisis.
 Keep your responses concise, warm, and helpful.`;
 
 // Create a new session
-router.post('/sessions', auth, async (req, res) => {
+router.post('/sessions', authenticateToken, async (req, res) => {
     try {
         const session = new AISession({
-            user: req.user.userId,
+            user: req.user._id,
             title: 'New Conversation',
             messages: []
         });
@@ -30,9 +30,9 @@ router.post('/sessions', auth, async (req, res) => {
 });
 
 // Get all sessions for a user
-router.get('/sessions', auth, async (req, res) => {
+router.get('/sessions', authenticateToken, async (req, res) => {
     try {
-        const sessions = await AISession.find({ user: req.user.userId }).sort({ updatedAt: -1 });
+        const sessions = await AISession.find({ user: req.user._id }).sort({ updatedAt: -1 });
         res.json(sessions);
     } catch (error) {
         console.error('Error fetching AI sessions:', error);
@@ -41,9 +41,9 @@ router.get('/sessions', auth, async (req, res) => {
 });
 
 // Get a specific session
-router.get('/sessions/:id', auth, async (req, res) => {
+router.get('/sessions/:id', authenticateToken, async (req, res) => {
     try {
-        const session = await AISession.findOne({ _id: req.params.id, user: req.user.userId });
+        const session = await AISession.findOne({ _id: req.params.id, user: req.user._id });
         if (!session) return res.status(404).json({ message: 'Session not found' });
         res.json(session);
     } catch (error) {
@@ -53,7 +53,7 @@ router.get('/sessions/:id', auth, async (req, res) => {
 });
 
 // Send a message
-router.post('/message', auth, async (req, res) => {
+router.post('/message', authenticateToken, async (req, res) => {
     const { sessionId, message } = req.body;
 
     if (!message) {
@@ -63,12 +63,12 @@ router.post('/message', auth, async (req, res) => {
     try {
         let session;
         if (sessionId) {
-            session = await AISession.findOne({ _id: sessionId, user: req.user.userId });
+            session = await AISession.findOne({ _id: sessionId, user: req.user._id });
             if (!session) return res.status(404).json({ message: 'Session not found' });
         } else {
             // Create new if not provided
             session = new AISession({
-                user: req.user.userId,
+                user: req.user._id,
                 title: message.substring(0, 30) + '...',
                 messages: []
             });
@@ -123,9 +123,9 @@ router.post('/message', auth, async (req, res) => {
 });
 
 // Delete a session
-router.delete('/sessions/:id', auth, async (req, res) => {
+router.delete('/sessions/:id', authenticateToken, async (req, res) => {
     try {
-        const result = await AISession.deleteOne({ _id: req.params.id, user: req.user.userId });
+        const result = await AISession.deleteOne({ _id: req.params.id, user: req.user._id });
         if (result.deletedCount === 0) return res.status(404).json({ message: 'Session not found' });
         res.json({ message: 'Session deleted' });
     } catch (error) {
