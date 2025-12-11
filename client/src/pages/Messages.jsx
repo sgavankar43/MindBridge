@@ -87,99 +87,124 @@ export default function Messages() {
         };
 
         if (activeSessionId) {
-            setSessions(prev => prev.map(session => {
-              if (session._id === activeSessionId) {
-                return {
-                  ...session,
-                  title: response.sessionTitle, // Update title if it changed
-                  messages: [...session.messages, aiMessage],
-                  updatedAt: new Date().toISOString()
-                }
-              }
-              return session
-            }));
-        } else {
-            // New session was created on the fly
-            const newSession = {
-                _id: response.sessionId,
-                title: response.sessionTitle,
-                messages: [newMessage, aiMessage],
+          setSessions(prev => prev.map(session => {
+            if (session._id === activeSessionId) {
+              return {
+                ...session,
+                title: response.sessionTitle, // Update title if it changed
+                messages: [...session.messages, aiMessage],
                 updatedAt: new Date().toISOString()
-            };
-            setSessions([newSession, ...sessions]);
-            setActiveSessionId(response.sessionId);
+              }
+            }
+            return session
+          }));
+        } else {
+          // New session was created on the fly
+          const newSession = {
+            _id: response.sessionId,
+            title: response.sessionTitle,
+            messages: [newMessage, aiMessage],
+            updatedAt: new Date().toISOString()
+          };
+          setSessions([newSession, ...sessions]);
+          setActiveSessionId(response.sessionId);
         }
 
       } catch (error) {
         console.error("Error sending message:", error);
-        // Revert optimistic update or show error?
+
+        const errorMessage = error.response || error.message || "Something went wrong. Please try again.";
+
+        const errorMsgObject = {
+          role: "model",
+          content: `⚠️ Error: ${errorMessage}`,
+          timestamp: new Date().toISOString()
+        };
+
+        if (activeSessionId) {
+          setSessions(prev => prev.map(session => {
+            if (session._id === activeSessionId) {
+              return {
+                ...session,
+                messages: [...session.messages, errorMsgObject],
+                updatedAt: new Date().toISOString()
+              }
+            }
+            return session
+          }));
+        } else {
+          // Handle error for new session creation context
+          if (sessions.length > 0 && sessions[0].id === 'temp-id') {
+            // You might need more complex logic here if you were creating a temp session
+          }
+        }
       } finally {
         setIsTyping(false);
       }
     } else if (inputMessage.trim() && !activeSessionId) {
-        // If no active session, create one
-        handleNewSession(inputMessage);
+      // If no active session, create one
+      handleNewSession(inputMessage);
     }
   }
 
   const handleNewSession = async (initialMessage = null) => {
     if (initialMessage) {
-        // We will just let handleSendMessage handle creation on the fly
-        // effectively treating "no active session" + "message" as "create new"
-        const userMessage = initialMessage;
-        setInputMessage("");
-        setIsTyping(true);
+      // We will just let handleSendMessage handle creation on the fly
+      // effectively treating "no active session" + "message" as "create new"
+      const userMessage = initialMessage;
+      setInputMessage("");
+      setIsTyping(true);
 
-        try {
-            const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/message`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    message: userMessage
-                })
-            });
+      try {
+        const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/message`, {
+          method: 'POST',
+          body: JSON.stringify({
+            message: userMessage
+          })
+        });
 
-            const newSession = {
-                _id: response.sessionId,
-                title: response.sessionTitle,
-                messages: [
-                    { role: "user", content: userMessage, timestamp: new Date().toISOString() },
-                    { role: "model", content: response.response, timestamp: new Date().toISOString() }
-                ],
-                updatedAt: new Date().toISOString()
-            };
-            setSessions([newSession, ...sessions]);
-            setActiveSessionId(response.sessionId);
-        } catch (error) {
-            console.error("Error creating new session with message:", error);
-        } finally {
-            setIsTyping(false);
-        }
-        return;
+        const newSession = {
+          _id: response.sessionId,
+          title: response.sessionTitle,
+          messages: [
+            { role: "user", content: userMessage, timestamp: new Date().toISOString() },
+            { role: "model", content: response.response, timestamp: new Date().toISOString() }
+          ],
+          updatedAt: new Date().toISOString()
+        };
+        setSessions([newSession, ...sessions]);
+        setActiveSessionId(response.sessionId);
+      } catch (error) {
+        console.error("Error creating new session with message:", error);
+      } finally {
+        setIsTyping(false);
+      }
+      return;
     }
 
     try {
-        const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions`, {
-            method: 'POST'
-        });
-        setSessions([response, ...sessions]);
-        setActiveSessionId(response._id);
+      const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions`, {
+        method: 'POST'
+      });
+      setSessions([response, ...sessions]);
+      setActiveSessionId(response._id);
     } catch (error) {
-        console.error("Error creating session:", error);
+      console.error("Error creating session:", error);
     }
   }
 
   const handleDeleteSession = async (sessionId) => {
     try {
-        await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions/${sessionId}`, {
-            method: 'DELETE'
-        });
-        const newSessions = sessions.filter(s => s._id !== sessionId);
-        setSessions(newSessions);
-        if (activeSessionId === sessionId) {
-            setActiveSessionId(newSessions.length > 0 ? newSessions[0]._id : null);
-        }
+      await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions/${sessionId}`, {
+        method: 'DELETE'
+      });
+      const newSessions = sessions.filter(s => s._id !== sessionId);
+      setSessions(newSessions);
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(newSessions.length > 0 ? newSessions[0]._id : null);
+      }
     } catch (error) {
-        console.error("Error deleting session:", error);
+      console.error("Error deleting session:", error);
     }
   }
 
@@ -208,43 +233,43 @@ export default function Messages() {
             <div className="flex-1 overflow-y-auto p-3">
               <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">Chat History</h3>
               {loadingSessions ? (
-                  <div className="p-4 text-center text-gray-500 text-sm">Loading history...</div>
+                <div className="p-4 text-center text-gray-500 text-sm">Loading history...</div>
               ) : (
                 <div className="space-y-1">
-                    {sessions.map((session) => (
+                  {sessions.map((session) => (
                     <div
-                        key={session._id}
-                        className={`group relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${activeSessionId === session._id
-                            ? 'bg-gray-100'
-                            : 'hover:bg-gray-50'
+                      key={session._id}
+                      className={`group relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${activeSessionId === session._id
+                        ? 'bg-gray-100'
+                        : 'hover:bg-gray-50'
                         }`}
-                        onClick={() => setActiveSessionId(session._id)}
+                      onClick={() => setActiveSessionId(session._id)}
                     >
-                        <MessageSquare className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
+                      <MessageSquare className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium text-[#2d2d2d] truncate">
-                            {session.title}
+                          {session.title}
                         </h4>
                         <p className="text-xs text-gray-500 truncate">
-                            {session.messages && session.messages.length > 0
-                                ? session.messages[session.messages.length - 1].content
-                                : "Empty conversation"}
+                          {session.messages && session.messages.length > 0
+                            ? session.messages[session.messages.length - 1].content
+                            : "Empty conversation"}
                         </p>
                         <span className="text-xs text-gray-400 mt-1 block">
-                            {new Date(session.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(session.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        </div>
-                        <button
+                      </div>
+                      <button
                         onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteSession(session._id)
+                          e.stopPropagation()
+                          handleDeleteSession(session._id)
                         }}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
-                        >
+                      >
                         <Trash2 className="w-4 h-4 text-gray-500" />
-                        </button>
+                      </button>
                     </div>
-                    ))}
+                  ))}
                 </div>
               )}
             </div>
@@ -275,7 +300,7 @@ export default function Messages() {
                     </div>
                     <div>
                       <h2 className="font-semibold text-[#2d2d2d]">
-                          {activeSession ? activeSession.title : "New Conversation"}
+                        {activeSession ? activeSession.title : "New Conversation"}
                       </h2>
                       <p className="text-xs text-green-500 flex items-center gap-1">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
@@ -317,8 +342,8 @@ export default function Messages() {
                           <div className={`max-w-[70%] ${message.role === 'user' ? 'order-1' : ''}`}>
                             <div
                               className={`px-4 py-3 rounded-2xl ${message.role === 'user'
-                                  ? 'bg-[#e74c3c] text-white rounded-br-sm'
-                                  : 'bg-gray-100 text-[#2d2d2d] rounded-bl-sm'
+                                ? 'bg-[#e74c3c] text-white rounded-br-sm'
+                                : 'bg-gray-100 text-[#2d2d2d] rounded-bl-sm'
                                 }`}
                             >
                               <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>

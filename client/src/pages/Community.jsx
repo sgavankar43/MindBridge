@@ -33,9 +33,20 @@ export default function Community() {
     }, [])
 
     useEffect(() => {
-        if (searchQuery || filters.role || filters.location) {
-            handleSearch()
-        }
+        const timer = setTimeout(() => {
+            if (searchQuery || filters.role || filters.location) {
+                handleSearch()
+            } else if (!searchQuery && !filters.role && !filters.location) {
+                // If cleared, fetch all posts/users again
+                if (activeTab === "posts") {
+                    fetchPosts()
+                }
+                // For users we might not want to fetch all by default, or maybe we do?
+                // Current logic only searches users on filter. 
+            }
+        }, 500)
+
+        return () => clearTimeout(timer)
     }, [searchQuery, filters, activeTab])
 
     const fetchPosts = async () => {
@@ -183,7 +194,7 @@ export default function Community() {
             <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-28">
                 <Header />
 
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto mt-14">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h2 className="text-2xl sm:text-3xl font-bold text-[#2d2d2d]">Community</h2>
 
@@ -198,6 +209,21 @@ export default function Community() {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full pl-10 pr-12 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
                                 />
+                                {loading ? (
+                                    <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#e74c3c]"></div>
+                                    </div>
+                                ) : searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute right-10 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <span className="sr-only">Clear search</span>
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setShowFilters(!showFilters)}
                                     className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${showFilters ? 'text-[#e74c3c]' : 'text-gray-400'}`}
@@ -236,7 +262,7 @@ export default function Community() {
                                                     <label className="text-xs text-gray-500 block mb-1">Role</label>
                                                     <select
                                                         value={filters.role}
-                                                        onChange={(e) => setFilters({...filters, role: e.target.value})}
+                                                        onChange={(e) => setFilters({ ...filters, role: e.target.value })}
                                                         className="w-full p-2 bg-gray-50 rounded-lg text-sm"
                                                     >
                                                         <option value="">All</option>
@@ -250,7 +276,7 @@ export default function Community() {
                                                         type="text"
                                                         placeholder="e.g. New York"
                                                         value={filters.location}
-                                                        onChange={(e) => setFilters({...filters, location: e.target.value})}
+                                                        onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                                                         className="w-full p-2 bg-gray-50 rounded-lg text-sm"
                                                     />
                                                 </div>
@@ -261,7 +287,7 @@ export default function Community() {
                                                             type="number"
                                                             placeholder="0"
                                                             value={filters.minFees}
-                                                            onChange={(e) => setFilters({...filters, minFees: e.target.value})}
+                                                            onChange={(e) => setFilters({ ...filters, minFees: e.target.value })}
                                                             className="w-full p-2 bg-gray-50 rounded-lg text-sm"
                                                         />
                                                     </div>
@@ -271,7 +297,7 @@ export default function Community() {
                                                             type="number"
                                                             placeholder="500"
                                                             value={filters.maxFees}
-                                                            onChange={(e) => setFilters({...filters, maxFees: e.target.value})}
+                                                            onChange={(e) => setFilters({ ...filters, maxFees: e.target.value })}
                                                             className="w-full p-2 bg-gray-50 rounded-lg text-sm"
                                                         />
                                                     </div>

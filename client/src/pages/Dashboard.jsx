@@ -3,9 +3,35 @@ import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause, Heart, MessageCircle } from "lucide-react"
+import { apiRequest } from "../config/api"
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [updates, setUpdates] = useState([])
+
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      try {
+        const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts`)
+        if (Array.isArray(data)) {
+          const formatted = data.slice(0, 5).map(post => ({
+            id: post._id,
+            author: post.author?.name || 'Anonymous User',
+            avatar: post.author?.name?.[0] || '?',
+            color: "bg-blue-500",
+            content: post.content || "",
+            likes: post.likes?.length || 0,
+            comments: post.comments?.length || 0,
+            time: new Date(post.createdAt).toLocaleDateString()
+          }))
+          setUpdates(formatted)
+        }
+      } catch (error) {
+        console.error("Failed to load community updates:", error)
+      }
+    }
+    fetchUpdates()
+  }, [])
 
   // Task Manager State
   const [tasks, setTasks] = useState([
@@ -74,39 +100,7 @@ export default function Dashboard() {
 
   const completedTasks = tasks.filter(t => t.completed).length
 
-  // Community Updates State
-  const communityUpdates = [
-    {
-      id: 1,
-      author: "Dr. Sarah Mitchell",
-      avatar: "SM",
-      color: "bg-purple-500",
-      content: "New mindfulness workshop starting next week! Join us for daily sessions.",
-      likes: 45,
-      comments: 12,
-      time: "2h ago"
-    },
-    {
-      id: 2,
-      author: "Alex Thompson",
-      avatar: "AT",
-      color: "bg-blue-500",
-      content: "Just completed my 30-day meditation streak! Feeling amazing 🎉",
-      likes: 89,
-      comments: 24,
-      time: "5h ago"
-    },
-    {
-      id: 3,
-      author: "Emma Wilson",
-      avatar: "EW",
-      color: "bg-green-500",
-      content: "Remember: Progress, not perfection. Every small step counts! 💪",
-      likes: 156,
-      comments: 31,
-      time: "1d ago"
-    }
-  ]
+
 
   return (
     <div className="flex min-h-screen bg-[#f5f0e8]">
@@ -219,38 +213,42 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {communityUpdates.map((update) => (
-                  <div
-                    key={update.id}
-                    onClick={() => navigate('/community')}
-                    className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className={`w-10 h-10 ${update.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                        <span className="text-white font-bold text-xs">{update.avatar}</span>
+                {updates.length > 0 ? (
+                  updates.map((update) => (
+                    <div
+                      key={update.id}
+                      onClick={() => navigate('/community')}
+                      className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className={`w-10 h-10 ${update.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                          <span className="text-white font-bold text-xs">{update.avatar}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-[#2d2d2d] truncate">
+                            {update.author}
+                          </h4>
+                          <p className="text-xs text-gray-400">{update.time}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-[#2d2d2d] truncate">
-                          {update.author}
-                        </h4>
-                        <p className="text-xs text-gray-400">{update.time}</p>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {update.content}
+                      </p>
+                      <div className="flex items-center gap-4 text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          <span className="text-xs">{update.likes}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-4 h-4" />
+                          <span className="text-xs">{update.comments}</span>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {update.content}
-                    </p>
-                    <div className="flex items-center gap-4 text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-4 h-4" />
-                        <span className="text-xs">{update.likes}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="w-4 h-4" />
-                        <span className="text-xs">{update.comments}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-center text-sm text-gray-500 py-4">No community updates yet.</p>
+                )}
               </div>
 
               <button
