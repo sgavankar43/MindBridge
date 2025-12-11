@@ -1,9 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
 
 console.log('🚀 Starting MindBridge Server...');
 
@@ -80,6 +83,22 @@ try {
     console.error('❌ Error loading admin routes:', error.message);
 }
 
+try {
+    const aiRoutes = require('./routes/ai');
+    app.use('/api/ai', aiRoutes);
+    console.log('✅ AI routes loaded');
+} catch (error) {
+    console.error('❌ Error loading AI routes:', error.message);
+}
+
+try {
+    const messageRoutes = require('./routes/messages');
+    app.use('/api/messages', messageRoutes);
+    console.log('✅ Message routes loaded');
+} catch (error) {
+    console.error('❌ Error loading message routes:', error.message);
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({
@@ -103,10 +122,48 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5002;
 
-app.listen(PORT, () => {
+// Socket.io setup
+const io = new Server(server, {
+    cors: {
+        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+// Store socket instances for easy access in routes if needed,
+// or just use io instance
+app.set('io', io);
+
+// Socket connection handling
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    // Join a personal room for private messaging
+    socket.on('join_user_room', (userId) => {
+        if (userId) {
+            socket.join(userId);
+            console.log(`User ${userId} joined their room`);
+        }
+    });
+
+    socket.on('send_message', (data) => {
+        // Broadcast to the recipient's room
+        // data should contain { recipientId, message }
+        if (data.recipientId) {
+            io.to(data.recipientId).emit('receive_message', data);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`🔗 Test: http://localhost:${PORT}/api/test`);
     console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
 });
 
-module.exports = app;
+module.exports = { app, io };

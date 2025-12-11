@@ -1,100 +1,164 @@
 import { useState, useRef, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Search, Send, Paperclip, Smile, MoreVertical, Phone, Video, ArrowLeft } from "lucide-react"
-
-// Dummy data
-const dummyUsers = [
-    {
-        id: 1,
-        name: "Dr. Sarah Mitchell",
-        avatar: "SM",
-        online: true,
-        lastMessage: "How are you feeling today?",
-        timestamp: "5m ago",
-        unread: 2,
-        color: "bg-purple-500"
-    },
-    {
-        id: 2,
-        name: "Alex Thompson",
-        avatar: "AT",
-        online: true,
-        lastMessage: "Thanks for the support!",
-        timestamp: "1h ago",
-        unread: 0,
-        color: "bg-blue-500"
-    },
-    {
-        id: 3,
-        name: "Emma Wilson",
-        avatar: "EW",
-        online: false,
-        lastMessage: "See you in the next session",
-        timestamp: "3h ago",
-        unread: 1,
-        color: "bg-green-500"
-    },
-    {
-        id: 4,
-        name: "Dr. John Davis",
-        avatar: "JD",
-        online: true,
-        lastMessage: "Let's schedule our next appointment",
-        timestamp: "5h ago",
-        unread: 0,
-        color: "bg-orange-500"
-    },
-    {
-        id: 5,
-        name: "Lisa Martinez",
-        avatar: "LM",
-        online: false,
-        lastMessage: "Great progress this week!",
-        timestamp: "Yesterday",
-        unread: 0,
-        color: "bg-teal-500"
-    },
-]
-
-const dummyMessages = {
-    1: [
-        { id: 1, text: "Hi! How have you been?", sent: false, timestamp: "10:30 AM" },
-        { id: 2, text: "I've been doing better, thanks for asking!", sent: true, timestamp: "10:32 AM" },
-        { id: 3, text: "That's wonderful to hear! What's been helping?", sent: false, timestamp: "10:33 AM" },
-        { id: 4, text: "The breathing exercises you recommended have been really helpful.", sent: true, timestamp: "10:35 AM" },
-        { id: 5, text: "I'm so glad! Keep practicing them daily.", sent: false, timestamp: "10:36 AM" },
-        { id: 6, text: "How are you feeling today?", sent: false, timestamp: "10:38 AM" },
-    ],
-    2: [
-        { id: 1, text: "Thanks for the support!", sent: false, timestamp: "9:15 AM" },
-        { id: 2, text: "You're welcome! I'm always here if you need to talk.", sent: true, timestamp: "9:20 AM" },
-    ],
-    3: [{ id: 1, text: "See you in the next session", sent: false, timestamp: "Yesterday" }],
-    4: [{ id: 1, text: "Let's schedule our next appointment", sent: false, timestamp: "8:00 AM" }],
-    5: [{ id: 1, text: "Great progress this week!", sent: false, timestamp: "Yesterday" }],
-}
+import { apiRequest } from "../config/api"
+import { useUser } from "../context/UserContext"
+import { io } from "socket.io-client"
 
 export default function DirectMessages() {
+    const { user } = useUser()
+    const location = useLocation()
     const [selectedUser, setSelectedUser] = useState(null)
+    const [conversations, setConversations] = useState([])
     const [messages, setMessages] = useState([])
     const [messageInput, setMessageInput] = useState("")
     const [isTyping, setIsTyping] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const messagesEndRef = useRef(null)
+    const socketRef = useRef(null)
+    const selectedUserRef = useRef(null) // Keep track of selectedUser for socket callback
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    }
+    // Update ref whenever selectedUser changes
+    useEffect(() => {
+        selectedUserRef.current = selectedUser;
+        if (selectedUser) {
+            fetchMessages(selectedUser.id || selectedUser._id);
+        }
+    }, [selectedUser]);
+
+    // Initial setup: Connect socket and fetch conversations
+    useEffect(() => {
+        // Initialize socket connection
+        const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5002", {
+            withCredentials: true
+        });
+
+        socketRef.current = socket;
+
+        socket.on("connect", () => {
+            console.log("Connected to socket server");
+            if (user?._id) {
+                socket.emit("join_user_room", user._id);
+            }
+        });
+
+        socket.on("receive_message", (message) => {
+            // For simplicity, we'll refresh conversations list to update previews/unread
+            fetchConversations();
+
+            // Check against ref to see if we are currently chatting with the sender/recipient
+            const currentUser = selectedUserRef.current;
+
+            if (currentUser && (message.sender === currentUser.id || message.sender === currentUser._id ||
+                message.recipient === currentUser.id || message.recipient === currentUser._id)) {
+
+               setMessages(prev => {
+                   // Avoid duplicates if we already optimistically added it (though ID check helps)
+                   if (prev.some(m => m.id === message._id)) return prev;
+
+                   return [...prev, {
+                       id: message._id,
+                       text: message.text,
+                       sent: message.sender === user?._id,
+                       timestamp: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                   }]
+               });
+            }
+        });
+
+        fetchConversations();
+
+        // Check if we navigated here with a specific user to chat with
+        const stateUser = location.state?.selectedUser;
+        if (stateUser) {
+            handleUserSelect(stateUser);
+        }
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [user?._id]);
+
+    // Re-join room if user changes (e.g. login)
+    useEffect(() => {
+        if (socketRef.current && user?._id) {
+            socketRef.current.emit("join_user_room", user._id);
+        }
+    }, [user?._id]);
 
     useEffect(() => {
         scrollToBottom()
     }, [messages])
 
-    const handleUserSelect = (user) => {
-        setSelectedUser(user)
-        setMessages(dummyMessages[user.id] || [])
-        setIsTyping(false)
+    const fetchConversations = async () => {
+        try {
+            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/conversations`)
+
+            const formatted = data.map(c => ({
+                id: c.id,
+                _id: c.id, // Keep both for compatibility
+                name: c.name,
+                avatar: c.name ? c.name.substring(0, 2).toUpperCase() : "??",
+                online: false, // Need online status logic (e.g. via socket)
+                lastMessage: c.lastMessage,
+                timestamp: new Date(c.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
+                    ? new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : new Date(c.timestamp).toLocaleDateString(),
+                unread: c.unread,
+                color: "bg-blue-500" // Random or deterministic color
+            }));
+
+            setConversations(formatted);
+
+        } catch (error) {
+            console.error("Error fetching conversations:", error)
+        }
+    }
+
+    const fetchMessages = async (userId) => {
+        try {
+            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/${userId}`)
+
+            const formatted = data.map(m => ({
+                id: m._id,
+                text: m.text,
+                sent: m.sender === user?._id,
+                timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+
+            setMessages(formatted);
+
+            // Mark as read locally (backend does it on fetch)
+            setConversations(prev => prev.map(c => {
+                if (c.id === userId) {
+                    return { ...c, unread: 0 };
+                }
+                return c;
+            }));
+
+        } catch (error) {
+            console.error("Error fetching messages:", error)
+        }
+    }
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+
+    const handleUserSelect = (userData) => {
+        // Normalise user object
+        const userObj = {
+            id: userData.id || userData._id,
+            _id: userData.id || userData._id,
+            name: userData.name,
+            avatar: userData.name ? userData.name.substring(0, 2).toUpperCase() : "??",
+            color: "bg-blue-500", // Default
+            ...userData
+        };
+        setSelectedUser(userObj);
+        // Messages fetched via useEffect
     }
 
     const handleBack = () => {
@@ -102,23 +166,44 @@ export default function DirectMessages() {
         setMessages([])
     }
 
-    const handleSendMessage = () => {
-        if (messageInput.trim()) {
+    const handleSendMessage = async () => {
+        if (messageInput.trim() && selectedUser) {
+            const tempId = Date.now();
+            const text = messageInput;
+
+            // Optimistic update
             const newMessage = {
-                id: messages.length + 1,
-                text: messageInput,
+                id: tempId,
+                text: text,
                 sent: true,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }
-            setMessages([...messages, newMessage])
-            setMessageInput("")
-            setIsTyping(true)
-            setTimeout(() => setIsTyping(false), 2000)
+            setMessages(prev => [...prev, newMessage]);
+            setMessageInput("");
+
+            try {
+                await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        recipientId: selectedUser.id || selectedUser._id,
+                        text: text
+                    })
+                });
+
+                // Refresh conversations to update last message
+                fetchConversations();
+
+            } catch (error) {
+                console.error("Error sending message:", error);
+                // Remove optimistic message on failure
+                setMessages(prev => prev.filter(m => m.id !== tempId));
+                alert("Failed to send message");
+            }
         }
     }
 
-    const filteredUsers = dummyUsers.filter(user =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredUsers = conversations.filter(u =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     // Sidebar Component
@@ -147,31 +232,31 @@ export default function DirectMessages() {
                     </div>
                 ) : (
                     <div className="p-2">
-                        {filteredUsers.map((user) => (
+                        {filteredUsers.map((u) => (
                             <button
-                                key={user.id}
-                                onClick={() => handleUserSelect(user)}
-                                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-gray-100 text-left ${selectedUser?.id === user.id ? 'bg-gray-100' : ''
+                                key={u.id}
+                                onClick={() => handleUserSelect(u)}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-gray-100 text-left ${selectedUser?.id === u.id ? 'bg-gray-100' : ''
                                     }`}
                             >
                                 <div className="relative">
-                                    <div className={`w-12 h-12 ${user.color} rounded-full flex items-center justify-center`}>
-                                        <span className="text-white font-bold text-sm">{user.avatar}</span>
+                                    <div className={`w-12 h-12 ${u.color} rounded-full flex items-center justify-center`}>
+                                        <span className="text-white font-bold text-sm">{u.avatar}</span>
                                     </div>
-                                    {user.online && (
+                                    {u.online && (
                                         <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2 mb-1">
-                                        <h3 className="font-medium text-[#2d2d2d] truncate">{user.name}</h3>
-                                        <span className="text-xs text-gray-400 whitespace-nowrap">{user.timestamp}</span>
+                                        <h3 className="font-medium text-[#2d2d2d] truncate">{u.name}</h3>
+                                        <span className="text-xs text-gray-400 whitespace-nowrap">{u.timestamp}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-2">
-                                        <p className="text-sm text-gray-500 truncate">{user.lastMessage}</p>
-                                        {user.unread > 0 && (
+                                        <p className="text-sm text-gray-500 truncate">{u.lastMessage}</p>
+                                        {u.unread > 0 && (
                                             <span className="h-5 min-w-5 px-1.5 bg-[#e74c3c] rounded-full flex items-center justify-center text-white text-xs font-medium">
-                                                {user.unread}
+                                                {u.unread}
                                             </span>
                                         )}
                                     </div>

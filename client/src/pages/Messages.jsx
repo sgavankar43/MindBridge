@@ -1,122 +1,185 @@
 import { useState, useRef, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
-import { Send, Plus, MessageSquare, Trash2, Edit2, MoreVertical } from "lucide-react"
+import { Send, Plus, MessageSquare, Trash2, MoreVertical } from "lucide-react"
+import { apiRequest } from "../config/api"
 
 export default function Messages() {
-  const [sessions, setSessions] = useState([
-    {
-      id: 1,
-      title: "Anxiety Management",
-      timestamp: "Today, 2:30 PM",
-      preview: "I've been feeling anxious lately...",
-      messages: [
-        { id: 1, text: "I've been feeling anxious lately and I'm not sure how to cope.", sender: "user", timestamp: "2:30 PM" },
-        { id: 2, text: "I understand you're experiencing anxiety. It's completely normal to feel this way, and I'm here to help. Can you tell me more about what triggers these feelings?", sender: "ai", timestamp: "2:31 PM" },
-        { id: 3, text: "It usually happens when I have a lot of work deadlines approaching.", sender: "user", timestamp: "2:32 PM" },
-        { id: 4, text: "Work-related stress is a common trigger for anxiety. Let's explore some coping strategies together. Have you tried any relaxation techniques like deep breathing or mindfulness?", sender: "ai", timestamp: "2:33 PM" }
-      ]
-    },
-    {
-      id: 2,
-      title: "Sleep Issues",
-      timestamp: "Yesterday, 9:15 PM",
-      preview: "I'm having trouble sleeping...",
-      messages: [
-        { id: 1, text: "I'm having trouble sleeping at night. Any suggestions?", sender: "user", timestamp: "9:15 PM" },
-        { id: 2, text: "Sleep difficulties can significantly impact your well-being. Let's work on establishing a healthy sleep routine. What time do you usually go to bed?", sender: "ai", timestamp: "9:16 PM" }
-      ]
-    },
-    {
-      id: 3,
-      title: "Stress Relief Techniques",
-      timestamp: "2 days ago",
-      preview: "What are some good stress relief...",
-      messages: [
-        { id: 1, text: "What are some good stress relief techniques I can practice daily?", sender: "user", timestamp: "3:45 PM" },
-        { id: 2, text: "Great question! Here are some effective daily stress relief techniques:\n\n1. Deep breathing exercises (5-10 minutes)\n2. Regular physical activity\n3. Mindfulness meditation\n4. Journaling\n5. Progressive muscle relaxation\n\nWould you like me to guide you through any of these?", sender: "ai", timestamp: "3:46 PM" }
-      ]
-    }
-  ])
-
-  const [activeSessionId, setActiveSessionId] = useState(1)
+  const [sessions, setSessions] = useState([])
+  const [activeSessionId, setActiveSessionId] = useState(null)
   const [inputMessage, setInputMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [loadingSessions, setLoadingSessions] = useState(true)
   const messagesEndRef = useRef(null)
 
-  const activeSession = sessions.find(s => s.id === activeSessionId)
+  const activeSession = sessions.find(s => s._id === activeSessionId)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  useEffect(() => {
+    fetchSessions()
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
   }, [activeSession?.messages, isTyping])
 
-  const handleSendMessage = () => {
-    if (inputMessage.trim() && activeSession) {
-      const newMessage = {
-        id: activeSession.messages.length + 1,
-        text: inputMessage,
-        sender: "user",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const fetchSessions = async () => {
+    setLoadingSessions(true)
+    try {
+      const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions`)
+      setSessions(data)
+      if (data.length > 0) {
+        setActiveSessionId(data[0]._id)
+      } else {
+        // Automatically start a new session if none exist
+        // handleNewSession()
       }
+    } catch (error) {
+      console.error("Error fetching sessions:", error)
+    } finally {
+      setLoadingSessions(false)
+    }
+  }
 
-      setSessions(sessions.map(session => {
-        if (session.id === activeSessionId) {
-          return {
-            ...session,
-            messages: [...session.messages, newMessage],
-            preview: inputMessage.substring(0, 50) + "...",
-            timestamp: "Just now"
-          }
-        }
-        return session
-      }))
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
-      setInputMessage("")
-      setIsTyping(true)
+  const handleSendMessage = async () => {
+    if (inputMessage.trim() && (activeSessionId || sessions.length === 0)) {
+      const userMessage = inputMessage;
+      setInputMessage("");
 
-      // Simulate AI response
-      setTimeout(() => {
-        const aiResponse = {
-          id: activeSession.messages.length + 2,
-          text: "Thank you for sharing that with me. I'm here to support you through this. Let's explore this further - how long have you been experiencing these feelings?",
-          sender: "ai",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
+      // Optimistic update
+      const newMessage = {
+        role: "user",
+        content: userMessage,
+        timestamp: new Date().toISOString()
+      };
 
-        setSessions(sessions.map(session => {
-          if (session.id === activeSessionId) {
+      if (activeSessionId) {
+        setSessions(prev => prev.map(session => {
+          if (session._id === activeSessionId) {
             return {
               ...session,
-              messages: [...session.messages, newMessage, aiResponse]
+              messages: [...session.messages, newMessage],
+              updatedAt: new Date().toISOString()
             }
           }
           return session
-        }))
-        setIsTyping(false)
-      }, 2000)
+        }));
+      }
+
+      setIsTyping(true);
+
+      try {
+        const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/message`, {
+          method: 'POST',
+          body: JSON.stringify({
+            sessionId: activeSessionId,
+            message: userMessage
+          })
+        });
+
+        const aiMessage = {
+          role: "model",
+          content: response.response,
+          timestamp: new Date().toISOString()
+        };
+
+        if (activeSessionId) {
+            setSessions(prev => prev.map(session => {
+              if (session._id === activeSessionId) {
+                return {
+                  ...session,
+                  title: response.sessionTitle, // Update title if it changed
+                  messages: [...session.messages, aiMessage],
+                  updatedAt: new Date().toISOString()
+                }
+              }
+              return session
+            }));
+        } else {
+            // New session was created on the fly
+            const newSession = {
+                _id: response.sessionId,
+                title: response.sessionTitle,
+                messages: [newMessage, aiMessage],
+                updatedAt: new Date().toISOString()
+            };
+            setSessions([newSession, ...sessions]);
+            setActiveSessionId(response.sessionId);
+        }
+
+      } catch (error) {
+        console.error("Error sending message:", error);
+        // Revert optimistic update or show error?
+      } finally {
+        setIsTyping(false);
+      }
+    } else if (inputMessage.trim() && !activeSessionId) {
+        // If no active session, create one
+        handleNewSession(inputMessage);
     }
   }
 
-  const handleNewSession = () => {
-    const newSession = {
-      id: sessions.length + 1,
-      title: "New Conversation",
-      timestamp: "Just now",
-      preview: "Start a new conversation...",
-      messages: []
+  const handleNewSession = async (initialMessage = null) => {
+    if (initialMessage) {
+        // We will just let handleSendMessage handle creation on the fly
+        // effectively treating "no active session" + "message" as "create new"
+        const userMessage = initialMessage;
+        setInputMessage("");
+        setIsTyping(true);
+
+        try {
+            const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/message`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    message: userMessage
+                })
+            });
+
+            const newSession = {
+                _id: response.sessionId,
+                title: response.sessionTitle,
+                messages: [
+                    { role: "user", content: userMessage, timestamp: new Date().toISOString() },
+                    { role: "model", content: response.response, timestamp: new Date().toISOString() }
+                ],
+                updatedAt: new Date().toISOString()
+            };
+            setSessions([newSession, ...sessions]);
+            setActiveSessionId(response.sessionId);
+        } catch (error) {
+            console.error("Error creating new session with message:", error);
+        } finally {
+            setIsTyping(false);
+        }
+        return;
     }
-    setSessions([newSession, ...sessions])
-    setActiveSessionId(newSession.id)
+
+    try {
+        const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions`, {
+            method: 'POST'
+        });
+        setSessions([response, ...sessions]);
+        setActiveSessionId(response._id);
+    } catch (error) {
+        console.error("Error creating session:", error);
+    }
   }
 
-  const handleDeleteSession = (sessionId) => {
-    setSessions(sessions.filter(s => s.id !== sessionId))
-    if (activeSessionId === sessionId && sessions.length > 1) {
-      setActiveSessionId(sessions[0].id === sessionId ? sessions[1].id : sessions[0].id)
+  const handleDeleteSession = async (sessionId) => {
+    try {
+        await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions/${sessionId}`, {
+            method: 'DELETE'
+        });
+        const newSessions = sessions.filter(s => s._id !== sessionId);
+        setSessions(newSessions);
+        if (activeSessionId === sessionId) {
+            setActiveSessionId(newSessions.length > 0 ? newSessions[0]._id : null);
+        }
+    } catch (error) {
+        console.error("Error deleting session:", error);
     }
   }
 
@@ -133,7 +196,7 @@ export default function Messages() {
             {/* Sidebar Header */}
             <div className="p-4 border-b border-gray-200">
               <button
-                onClick={handleNewSession}
+                onClick={() => handleNewSession()}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#e74c3c] text-white rounded-xl font-medium hover:bg-[#c0392b] transition-colors"
               >
                 <Plus className="w-5 h-5" />
@@ -144,40 +207,46 @@ export default function Messages() {
             {/* Sessions List */}
             <div className="flex-1 overflow-y-auto p-3">
               <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">Chat History</h3>
-              <div className="space-y-1">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`group relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${activeSessionId === session.id
-                        ? 'bg-gray-100'
-                        : 'hover:bg-gray-50'
-                      }`}
-                    onClick={() => setActiveSessionId(session.id)}
-                  >
-                    <MessageSquare className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-[#2d2d2d] truncate">
-                        {session.title}
-                      </h4>
-                      <p className="text-xs text-gray-500 truncate">
-                        {session.preview}
-                      </p>
-                      <span className="text-xs text-gray-400 mt-1 block">
-                        {session.timestamp}
-                      </span>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteSession(session.id)
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+              {loadingSessions ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">Loading history...</div>
+              ) : (
+                <div className="space-y-1">
+                    {sessions.map((session) => (
+                    <div
+                        key={session._id}
+                        className={`group relative flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors ${activeSessionId === session._id
+                            ? 'bg-gray-100'
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => setActiveSessionId(session._id)}
                     >
-                      <Trash2 className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                        <MessageSquare className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-[#2d2d2d] truncate">
+                            {session.title}
+                        </h4>
+                        <p className="text-xs text-gray-500 truncate">
+                            {session.messages && session.messages.length > 0
+                                ? session.messages[session.messages.length - 1].content
+                                : "Empty conversation"}
+                        </p>
+                        <span className="text-xs text-gray-400 mt-1 block">
+                            {new Date(session.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        </div>
+                        <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteSession(session._id)
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+                        >
+                        <Trash2 className="w-4 h-4 text-gray-500" />
+                        </button>
+                    </div>
+                    ))}
+                </div>
+              )}
             </div>
 
             {/* Sidebar Footer */}
@@ -196,7 +265,7 @@ export default function Messages() {
 
           {/* Chat Area */}
           <div className="flex-1 flex flex-col bg-white">
-            {activeSession ? (
+            {activeSession || (!activeSessionId && sessions.length === 0) ? (
               <>
                 {/* Chat Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -205,7 +274,9 @@ export default function Messages() {
                       <span className="text-white font-bold text-sm">AI</span>
                     </div>
                     <div>
-                      <h2 className="font-semibold text-[#2d2d2d]">{activeSession.title}</h2>
+                      <h2 className="font-semibold text-[#2d2d2d]">
+                          {activeSession ? activeSession.title : "New Conversation"}
+                      </h2>
                       <p className="text-xs text-green-500 flex items-center gap-1">
                         <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                         Online
@@ -219,7 +290,7 @@ export default function Messages() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                  {activeSession.messages.length === 0 ? (
+                  {(!activeSession || activeSession.messages.length === 0) ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8">
                       <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center mb-4">
                         <MessageSquare className="w-10 h-10 text-white" />
@@ -233,31 +304,31 @@ export default function Messages() {
                     </div>
                   ) : (
                     <div className="space-y-4 max-w-4xl mx-auto">
-                      {activeSession.messages.map((message) => (
+                      {activeSession.messages.map((message, index) => (
                         <div
-                          key={message.id}
-                          className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                          key={index}
+                          className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
-                          {message.sender === 'ai' && (
+                          {(message.role === 'model' || message.role === 'ai') && (
                             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-white font-bold text-xs">AI</span>
                             </div>
                           )}
-                          <div className={`max-w-[70%] ${message.sender === 'user' ? 'order-1' : ''}`}>
+                          <div className={`max-w-[70%] ${message.role === 'user' ? 'order-1' : ''}`}>
                             <div
-                              className={`px-4 py-3 rounded-2xl ${message.sender === 'user'
+                              className={`px-4 py-3 rounded-2xl ${message.role === 'user'
                                   ? 'bg-[#e74c3c] text-white rounded-br-sm'
                                   : 'bg-gray-100 text-[#2d2d2d] rounded-bl-sm'
                                 }`}
                             >
-                              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+                              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                             </div>
-                            <span className={`text-xs text-gray-400 mt-1 px-1 block ${message.sender === 'user' ? 'text-right' : 'text-left'
+                            <span className={`text-xs text-gray-400 mt-1 px-1 block ${message.role === 'user' ? 'text-right' : 'text-left'
                               }`}>
-                              {message.timestamp}
+                              {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          {message.sender === 'user' && (
+                          {message.role === 'user' && (
                             <div className="w-8 h-8 bg-[#e74c3c] rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-white font-bold text-xs">U</span>
                             </div>
