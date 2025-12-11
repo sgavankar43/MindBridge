@@ -5,7 +5,11 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { authenticateToken } = require('../middleware/auth');
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const API_KEY = process.env.GEMINI_API_KEY;
+if (!API_KEY) {
+    console.warn("⚠️  GEMINI_API_KEY is missing from environment variables. AI Chat will not function correctly.");
+}
+const genAI = new GoogleGenerativeAI(API_KEY || 'dummy_key_to_prevent_crash');
 
 const SYSTEM_INSTRUCTION = `You are MindBridge AI, a compassionate, empathetic, and professional mental health assistant.
 Your goal is to provide supportive listening, coping strategies, and psychoeducation.
@@ -82,6 +86,10 @@ router.post('/message', authenticateToken, async (req, res) => {
         await session.save();
 
         try {
+            if (!process.env.GEMINI_API_KEY) {
+                throw new Error("GEMINI_API_KEY is not configured on the server.");
+            }
+
             // Prepare history for Gemini
             // Map 'model' role to Gemini's 'model' and 'user' to 'user'
             const history = session.messages.map(msg => ({
@@ -122,11 +130,16 @@ router.post('/message', authenticateToken, async (req, res) => {
             });
         } catch (aiError) {
             console.error('Gemini API Error:', aiError);
-            // Return success but with a placeholder/error message from AI so frontend doesn't break
-            // Or we can return the saved session but indicate AI failed.
-            // For now, let's append a system error message to the chat so the user knows.
 
-            const errorMessage = "I'm having trouble connecting right now. Please try again later.";
+            let errorMessage = "I'm having trouble connecting right now. Please try again later.";
+
+            // Customize error message for missing key
+            if (aiError.message.includes("GEMINI_API_KEY")) {
+                errorMessage = "The AI service is currently unavailable (System Configuration Error).";
+            } else if (aiError.message.includes("400")) {
+                errorMessage = "I didn't quite catch that. Could you rephrase?";
+            }
+
             session.messages.push({ role: 'model', content: errorMessage });
             await session.save();
 
