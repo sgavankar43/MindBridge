@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const mongoose = require('mongoose');
 
 // Get list of conversations (users the current user has chatted with)
-router.get('/conversations', auth, async (req, res) => {
+router.get('/conversations', authenticateToken, async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user._id;
 
         // Aggregate to find unique users and the last message
         const conversations = await Message.aggregate([
@@ -85,9 +85,9 @@ router.get('/conversations', auth, async (req, res) => {
 });
 
 // Get messages between current user and another user
-router.get('/:userId', auth, async (req, res) => {
+router.get('/:userId', authenticateToken, async (req, res) => {
     try {
-        const currentUserId = req.user.userId;
+        const currentUserId = req.user._id;
         const otherUserId = req.params.userId;
 
         const messages = await Message.find({
@@ -111,10 +111,10 @@ router.get('/:userId', auth, async (req, res) => {
 });
 
 // Send a message
-router.post('/', auth, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
     try {
         const { recipientId, text } = req.body;
-        const senderId = req.user.userId;
+        const senderId = req.user._id;
 
         if (!recipientId || !text) {
             return res.status(400).json({ message: 'Recipient and text are required' });
