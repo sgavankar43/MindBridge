@@ -3,10 +3,13 @@ import { SidebarProvider } from './context/SidebarContext'
 import { UserProvider, useUser } from './context/UserContext'
 import Login from './pages/Login'
 import Registration from './pages/Registration'
+import VerificationPending from './pages/VerificationPending'
+import AdminDashboard from './pages/AdminDashboard'
 import NotFound from './pages/NotFound'
 
 import Dashboard from './pages/Dashboard'
 import Messages from './pages/Messages'
+import AITherapist from './pages/AITherapist'
 import DirectMessages from './pages/DirectMessages'
 import Profile from './pages/Profile'
 import Game from './pages/Game'
@@ -75,15 +78,17 @@ function AppRoutes() {
         {/* Public Routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/registration" element={<PublicRoute><Registration /></PublicRoute>} />
+        <Route path="/verification-pending" element={<VerificationPending />} />
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/ai-chat" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/ai-chat" element={<ProtectedRoute><AITherapist /></ProtectedRoute>} />
         <Route path="/direct-messages" element={<ProtectedRoute><DirectMessages /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />
         <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/gameMemoryMatch" element={<ProtectedRoute><GameMemoryMatch /></ProtectedRoute>} />
         <Route path="/gameBubblePop" element={<ProtectedRoute><GameBubblePop /></ProtectedRoute>} />
         <Route path="/gameTileSlider" element={<ProtectedRoute><GameTileSlider /></ProtectedRoute>} />

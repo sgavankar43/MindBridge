@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { Eye, EyeOff, Mail, Lock, User, Briefcase, AlertCircle, CheckCircle, Check } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Briefcase, AlertCircle, CheckCircle, Check, MapPin, DollarSign, Globe, Upload } from "lucide-react"
 import { API_ENDPOINTS, apiRequest } from "../config/api"
 import { useUser } from "../context/UserContext"
 
@@ -16,8 +16,12 @@ export default function Registration() {
     role: "user",
     profession: "",
     bio: "",
+    location: "",
+    consultationFees: "",
+    languages: "",
     agreeToTerms: false
   })
+  const [verificationDocs, setVerificationDocs] = useState([])
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -30,8 +34,11 @@ export default function Registration() {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     })
-    // Clear error when user starts typing
     if (error) setError("")
+  }
+
+  const handleFileChange = (e) => {
+    setVerificationDocs(Array.from(e.target.files))
   }
 
   const validateStep1 = () => {
@@ -51,6 +58,28 @@ export default function Registration() {
   }
 
   const validateStep2 = () => {
+    if (formData.role === 'therapist') {
+      if (!formData.profession.trim()) {
+        setError("Profession is required for therapists")
+        return false
+      }
+      if (!formData.location.trim()) {
+        setError("Location is required")
+        return false
+      }
+      if (!formData.consultationFees) {
+        setError("Consultation fee is required")
+        return false
+      }
+      if (verificationDocs.length === 0) {
+        setError("Please upload verification documents")
+        return false
+      }
+    }
+    return true
+  }
+
+  const validateStep3 = () => {
     if (formData.password.length < 6) {
       setError("Password must be at least 6 characters long")
       return false
@@ -73,50 +102,80 @@ export default function Registration() {
   const handleNext = () => {
     setError("")
     if (step === 1 && validateStep1()) {
-      setStep(2)
+      if (formData.role === 'therapist') {
+        setStep(2)
+      } else {
+        setStep(3)
+      }
+    } else if (step === 2 && validateStep2()) {
+      setStep(3)
     }
   }
 
   const handleBack = () => {
-    setStep(1)
+    if (step === 3) {
+      setStep(formData.role === 'therapist' ? 2 : 1)
+    } else {
+      setStep(step - 1)
+    }
     setError("")
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!validateStep2()) return
+    if (!validateStep3()) return
 
     setIsLoading(true)
     setError("")
 
     try {
-      const data = await apiRequest(API_ENDPOINTS.REGISTER, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          profession: formData.profession,
-          bio: formData.bio
-        })
+      const data = new FormData()
+      Object.keys(formData).forEach(key => {
+        if (key === 'languages') {
+          // Convert comma-separated string to array
+          const langs = formData.languages.split(',').map(l => l.trim()).filter(Boolean)
+          data.append(key, JSON.stringify(langs))
+        } else {
+          data.append(key, formData[key])
+        }
       })
 
-      // Use UserContext to handle registration/login
-      const userData = data.user || {
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        profession: formData.profession,
-        bio: formData.bio
+      verificationDocs.forEach(file => {
+        data.append('documents', file)
+      })
+
+      // We need to use fetch directly here because apiRequest handles JSON
+      const token = localStorage.getItem('token')
+      const response = await fetch(API_ENDPOINTS.REGISTER, {
+        method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: data
+      })
+
+      const responseData = await response.json()
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Registration failed')
       }
 
-      login(userData, data.token || 'mock-token')
+      const userData = responseData.user || {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role
+      }
 
-      setSuccess("Registration successful! Welcome to MindBridge!")
-      setTimeout(() => {
-        navigate('/dashboard')
-      }, 500)
+      login(userData, responseData.token || 'mock-token')
+
+      if (formData.role === 'therapist') {
+        navigate('/verification-pending')
+      } else {
+        setSuccess("Registration successful! Welcome to MindBridge!")
+        setTimeout(() => {
+          navigate('/dashboard')
+        }, 500)
+      }
     } catch (error) {
       setError(error.message || 'Registration failed')
     } finally {
@@ -124,35 +183,9 @@ export default function Registration() {
     }
   }
 
-  const passwordStrength = () => {
-    const password = formData.password
-    let strength = 0
-    if (password.length >= 6) strength++
-    if (/[a-z]/.test(password)) strength++
-    if (/[A-Z]/.test(password)) strength++
-    if (/\d/.test(password)) strength++
-    if (/[^A-Za-z0-9]/.test(password)) strength++
-    return strength
-  }
-
-  const getStrengthColor = () => {
-    const strength = passwordStrength()
-    if (strength <= 2) return 'bg-red-500'
-    if (strength <= 3) return 'bg-yellow-500'
-    return 'bg-green-500'
-  }
-
-  const getStrengthText = () => {
-    const strength = passwordStrength()
-    if (strength <= 2) return 'Weak'
-    if (strength <= 3) return 'Medium'
-    return 'Strong'
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f0e8] via-[#faf7f2] to-[#f0e6d6] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo/Brand */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[#e74c3c] rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-2xl">MB</span>
@@ -164,23 +197,23 @@ export default function Registration() {
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-4">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-[#e74c3c] text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-              {step > 1 ? <Check className="w-4 h-4" /> : '1'}
-            </div>
-            <div className={`w-16 h-1 ${step >= 2 ? 'bg-[#e74c3c]' : 'bg-gray-200'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-[#e74c3c] text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-              2
-            </div>
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-gray-500">
-            <span>Basic Info</span>
-            <span>Security</span>
+            {[1, 2, 3].map((s) => (
+              (formData.role === 'therapist' || s !== 2) && (
+                <div key={s} className="flex items-center">
+                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                     step >= s ? 'bg-[#e74c3c] text-white' : 'bg-gray-200 text-gray-500'
+                   }`}>
+                     {step > s ? <Check className="w-4 h-4" /> : (formData.role !== 'therapist' && s === 3 ? '2' : s)}
+                   </div>
+                   {s < (formData.role === 'therapist' ? 3 : 3) && (s !== 2 || formData.role === 'therapist') && (
+                     <div className={`w-8 h-1 mx-2 ${step > s ? 'bg-[#e74c3c]' : 'bg-gray-200'}`}></div>
+                   )}
+                </div>
+              )
+            ))}
           </div>
         </div>
 
-        {/* Registration Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
@@ -197,62 +230,47 @@ export default function Registration() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Step 1: Basic Information */}
             {step === 1 && (
               <>
-                {/* Name Field */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
-                      id="name"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:border-transparent transition-colors"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
                       placeholder="Enter your full name"
                     />
                   </div>
                 </div>
 
-                {/* Email Field */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="email"
-                      id="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:border-transparent transition-colors"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
                       placeholder="Enter your email"
                     />
                   </div>
                 </div>
 
-                {/* Role Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    I am a...
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">I am a...</label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'user' })}
-                      className={`p-4 border-2 rounded-xl text-left transition-colors ${formData.role === 'user'
-                        ? 'border-[#e74c3c] bg-red-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      className={`p-4 border-2 rounded-xl text-left transition-colors ${formData.role === 'user' ? 'border-[#e74c3c] bg-red-50' : 'border-gray-200'}`}
                     >
                       <div className="font-medium text-[#2d2d2d]">User</div>
                       <div className="text-sm text-gray-500">Seeking support</div>
@@ -260,10 +278,7 @@ export default function Registration() {
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'therapist' })}
-                      className={`p-4 border-2 rounded-xl text-left transition-colors ${formData.role === 'therapist'
-                        ? 'border-[#e74c3c] bg-red-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      className={`p-4 border-2 rounded-xl text-left transition-colors ${formData.role === 'therapist' ? 'border-[#e74c3c] bg-red-50' : 'border-gray-200'}`}
                     >
                       <div className="font-medium text-[#2d2d2d]">Therapist</div>
                       <div className="text-sm text-gray-500">Providing support</div>
@@ -271,128 +286,157 @@ export default function Registration() {
                   </div>
                 </div>
 
-                {/* Profession Field (for therapists) */}
-                {formData.role === 'therapist' && (
-                  <div>
-                    <label htmlFor="profession" className="block text-sm font-medium text-gray-700 mb-2">
-                      Profession
-                    </label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="text"
-                        id="profession"
-                        name="profession"
-                        value={formData.profession}
-                        onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:border-transparent transition-colors"
-                        placeholder="e.g., Licensed Clinical Social Worker"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Bio Field */}
-                <div>
-                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio (Optional)
-                  </label>
-                  <textarea
-                    id="bio"
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:border-transparent transition-colors resize-none"
-                    placeholder="Tell us a bit about yourself..."
-                  />
-                </div>
-
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="w-full py-3 px-4 bg-[#e74c3c] text-white font-medium rounded-xl hover:bg-[#c0392b] focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:ring-offset-2 transition-colors"
+                  className="w-full py-3 px-4 bg-[#e74c3c] text-white font-medium rounded-xl hover:bg-[#c0392b] transition-colors"
                 >
                   Continue
                 </button>
               </>
             )}
 
-            {/* Step 2: Security */}
-            {step === 2 && (
+            {step === 2 && formData.role === 'therapist' && (
               <>
-                {/* Password Field */}
+                 <div>
+                    <label htmlFor="profession" className="block text-sm font-medium text-gray-700 mb-2">Profession</label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        name="profession"
+                        value={formData.profession}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                        placeholder="e.g., Clinical Psychologist"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                        placeholder="City, Country"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fees ($/hr)</label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="number"
+                          name="consultationFees"
+                          value={formData.consultationFees}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Languages</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          name="languages"
+                          value={formData.languages}
+                          onChange={handleChange}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                          placeholder="Eng, Esp"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">License/Certificates</label>
+                    <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-[#e74c3c] transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">Click to upload files</p>
+                      {verificationDocs.length > 0 && (
+                        <p className="text-xs text-[#e74c3c] mt-2">{verificationDocs.length} file(s) selected</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="flex-1 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="flex-1 py-3 px-4 bg-[#e74c3c] text-white rounded-xl hover:bg-[#c0392b]"
+                    >
+                      Next
+                    </button>
+                  </div>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type={showPassword ? "text" : "password"}
-                      id="password"
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
                       required
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:border-transparent transition-colors"
-                      placeholder="Create a strong password"
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                      placeholder="Strong password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  {/* Password Strength Indicator */}
-                  {formData.password && (
-                    <div className="mt-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${getStrengthColor()}`}
-                            style={{ width: `${(passwordStrength() / 5) * 100}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-gray-500">{getStrengthText()}</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Confirm Password Field */}
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type={showConfirmPassword ? "text" : "password"}
-                      id="confirmPassword"
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:border-transparent transition-colors"
-                      placeholder="Confirm your password"
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                      placeholder="Confirm password"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
                   </div>
-                  {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
-                  )}
                 </div>
 
-                {/* Terms Agreement */}
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -400,66 +444,38 @@ export default function Registration() {
                     name="agreeToTerms"
                     checked={formData.agreeToTerms}
                     onChange={handleChange}
-                    className="w-4 h-4 text-[#e74c3c] border-gray-300 rounded focus:ring-[#e74c3c] mt-1"
+                    className="w-4 h-4 text-[#e74c3c] border-gray-300 rounded mt-1"
                   />
                   <label htmlFor="agreeToTerms" className="text-sm text-gray-600">
-                    I agree to the{" "}
-                    <Link to="/terms" className="text-[#e74c3c] hover:text-[#c0392b] transition-colors">
-                      Terms of Service
-                    </Link>{" "}
-                    and{" "}
-                    <Link to="/privacy" className="text-[#e74c3c] hover:text-[#c0392b] transition-colors">
-                      Privacy Policy
-                    </Link>
+                    I agree to the <Link to="/terms" className="text-[#e74c3c]">Terms</Link> and <Link to="/privacy" className="text-[#e74c3c]">Privacy Policy</Link>
                   </label>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50"
                   >
                     Back
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 py-3 px-4 bg-[#e74c3c] text-white font-medium rounded-xl hover:bg-[#c0392b] focus:outline-none focus:ring-2 focus:ring-[#e74c3c] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 py-3 px-4 bg-[#e74c3c] text-white rounded-xl hover:bg-[#c0392b] disabled:opacity-50"
                   >
-                    {isLoading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Creating...
-                      </div>
-                    ) : (
-                      "Create Account"
-                    )}
+                    {isLoading ? "Creating..." : "Create Account"}
                   </button>
                 </div>
               </>
             )}
           </form>
 
-          {/* Sign In Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link
-                to="/login"
-                className="text-[#e74c3c] hover:text-[#c0392b] font-medium transition-colors"
-              >
-                Sign in here
-              </Link>
+              Already have an account? <Link to="/login" className="text-[#e74c3c] font-medium">Sign in here</Link>
             </p>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>By creating an account, you're joining a supportive community</p>
-          <p className="mt-1">focused on mental health and wellness.</p>
         </div>
       </div>
     </div>

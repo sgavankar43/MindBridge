@@ -64,6 +64,38 @@ try {
     console.error('❌ Error loading user routes:', error.message);
 }
 
+try {
+    const postRoutes = require('./routes/posts');
+    app.use('/api/posts', postRoutes);
+    console.log('✅ Post routes loaded');
+} catch (error) {
+    console.error('❌ Error loading post routes:', error.message);
+}
+
+try {
+    const adminRoutes = require('./routes/admin');
+    app.use('/api/admin', adminRoutes);
+    console.log('✅ Admin routes loaded');
+} catch (error) {
+    console.error('❌ Error loading admin routes:', error.message);
+}
+
+try {
+    const chatRoutes = require('./routes/chatRoutes');
+    app.use('/api/chat', chatRoutes);
+    console.log('✅ Chat routes loaded');
+} catch (error) {
+    console.error('❌ Error loading chat routes:', error.message);
+}
+
+try {
+    const aiRoutes = require('./routes/aiRoutes');
+    app.use('/api/ai', aiRoutes);
+    console.log('✅ AI routes loaded');
+} catch (error) {
+    console.error('❌ Error loading AI routes:', error.message);
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({
