@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
-require('dotenv').config({ path: '../.env' }); // Adjust path if running from server/scripts
+require('dotenv').config({ path: '.env' });
 
 const seedUsers = async () => {
     try {

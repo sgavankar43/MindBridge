@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useLocation } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Search, Send, Paperclip, Smile, MoreVertical, Phone, Video, ArrowLeft } from "lucide-react"
@@ -10,6 +10,7 @@ import { io } from "socket.io-client"
 export default function DirectMessages() {
     const { user } = useUser()
     const location = useLocation()
+    const navigate = useNavigate()
     const [selectedUser, setSelectedUser] = useState(null)
     const [conversations, setConversations] = useState([])
     const [messages, setMessages] = useState([])
@@ -57,17 +58,17 @@ export default function DirectMessages() {
             if (currentUser && (message.sender === currentUser.id || message.sender === currentUser._id ||
                 message.recipient === currentUser.id || message.recipient === currentUser._id)) {
 
-               setMessages(prev => {
-                   // Avoid duplicates if we already optimistically added it (though ID check helps)
-                   if (prev.some(m => m.id === message._id)) return prev;
+                setMessages(prev => {
+                    // Avoid duplicates if we already optimistically added it (though ID check helps)
+                    if (prev.some(m => m.id === message._id)) return prev;
 
-                   return [...prev, {
-                       id: message._id,
-                       text: message.text,
-                       sent: message.sender === user?._id,
-                       timestamp: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                   }]
-               });
+                    return [...prev, {
+                        id: message._id,
+                        text: message.text,
+                        sent: message.sender === user?._id,
+                        timestamp: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    }]
+                });
             }
         });
 
@@ -209,12 +210,21 @@ export default function DirectMessages() {
         u.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    // Sidebar Component
-    const ChatSidebar = () => (
+    // Render helper for sidebar content
+    const renderSidebarContent = () => (
         <div className="flex flex-col h-full border-r border-gray-200 bg-white">
             {/* Header */}
             <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-[#2d2d2d] mb-4">Direct Messages</h2>
+                <div className="flex items-center gap-3 mb-4">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                        title="Go Back"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-lg font-semibold text-[#2d2d2d]">Direct Messages</h2>
+                </div>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
@@ -242,7 +252,13 @@ export default function DirectMessages() {
                                 className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-gray-100 text-left ${selectedUser?.id === u.id ? 'bg-gray-100' : ''
                                     }`}
                             >
-                                <div className="relative">
+                                <div
+                                    className="relative cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/profile?id=${u.id || u._id}`);
+                                    }}
+                                >
                                     <div className={`w-12 h-12 ${u.color} rounded-full flex items-center justify-center`}>
                                         <span className="text-white font-bold text-sm">{u.avatar}</span>
                                     </div>
@@ -270,12 +286,11 @@ export default function DirectMessages() {
                 )}
             </div>
         </div>
-    )
+    );
 
-    // Chat Window Component
-    const ChatWindow = () => {
+    // Render helper for chat window content
+    const renderChatWindowContent = () => {
         if (!selectedUser) {
-            // Empty state for desktop
             return (
                 <div className="flex flex-col h-full items-center justify-center text-center p-8 bg-white">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -294,7 +309,7 @@ export default function DirectMessages() {
                     <button onClick={handleBack} className="md:hidden p-2 hover:bg-gray-100 rounded-lg">
                         <ArrowLeft className="h-5 w-5 text-gray-600" />
                     </button>
-                    <div className="relative">
+                    <div className="relative cursor-pointer" onClick={() => navigate(`/profile?id=${selectedUser.id || selectedUser._id}`)}>
                         <div className={`w-10 h-10 ${selectedUser.color} rounded-full flex items-center justify-center`}>
                             <span className="text-white font-bold text-sm">{selectedUser.avatar}</span>
                         </div>
@@ -302,8 +317,8 @@ export default function DirectMessages() {
                             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                         )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <h2 className="font-semibold text-[#2d2d2d] truncate">{selectedUser.name}</h2>
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/profile?id=${selectedUser.id || selectedUser._id}`)}>
+                        <h2 className="font-semibold text-[#2d2d2d] truncate hover:underline">{selectedUser.name}</h2>
                         <p className="text-xs text-gray-400">{selectedUser.online ? 'Online' : 'Offline'}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -331,8 +346,8 @@ export default function DirectMessages() {
                                 <div key={message.id} className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}>
                                     <div className="max-w-[75%] md:max-w-[60%]">
                                         <div className={`px-4 py-2.5 rounded-2xl ${message.sent
-                                                ? 'bg-[#e74c3c] text-white rounded-br-sm'
-                                                : 'bg-gray-100 text-[#2d2d2d] rounded-bl-sm'
+                                            ? 'bg-[#e74c3c] text-white rounded-br-sm'
+                                            : 'bg-gray-100 text-[#2d2d2d] rounded-bl-sm'
                                             }`}>
                                             <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                                         </div>
@@ -394,29 +409,28 @@ export default function DirectMessages() {
             <div className="flex-1 lg:ml-16 p-4 md:p-6 lg:p-8 pt-28">
                 <Header />
 
-                {/* Chat Container */}
-                <div className="flex h-[calc(100vh-120px)] w-full overflow-hidden rounded-2xl shadow-sm">
+                {/* Chat Container - Added margin-top to clear header overlap */}
+                <div className="flex h-[calc(100vh-180px)] mt-12 w-full overflow-hidden rounded-2xl shadow-sm">
                     {/* Desktop: Always show sidebar */}
                     <div className="hidden md:flex md:w-80 lg:w-96 flex-shrink-0">
-                        <ChatSidebar />
+                        {renderSidebarContent()}
                     </div>
 
                     {/* Mobile: Show sidebar OR chat window */}
-                    {/* Desktop: Always show chat window */}
                     <div className="flex-1 flex min-h-0">
                         {selectedUser ? (
                             <div className="flex-1 flex flex-col">
-                                <ChatWindow />
+                                {renderChatWindowContent()}
                             </div>
                         ) : (
                             <>
                                 {/* Mobile: Show sidebar when no user selected */}
                                 <div className="flex-1 md:hidden">
-                                    <ChatSidebar />
+                                    {renderSidebarContent()}
                                 </div>
                                 {/* Desktop: Show empty state */}
                                 <div className="hidden md:flex flex-1">
-                                    <ChatWindow />
+                                    {renderChatWindowContent()}
                                 </div>
                             </>
                         )}
