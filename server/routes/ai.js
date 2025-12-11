@@ -77,48 +77,69 @@ router.post('/message', authenticateToken, async (req, res) => {
         // Add user message to history
         session.messages.push({ role: 'user', content: message });
 
-        // Prepare history for Gemini
-        // Map 'model' role to Gemini's 'model' and 'user' to 'user'
-        const history = session.messages.map(msg => ({
-            role: msg.role === 'ai' ? 'model' : msg.role, // Handle legacy 'ai' role if any
-            parts: [{ text: msg.content }]
-        }));
-
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            systemInstruction: SYSTEM_INSTRUCTION
-        });
-
-        const chat = model.startChat({
-            history: history.slice(0, -1), // Send all but the last one which is the new prompt
-            generationConfig: {
-                maxOutputTokens: 1000,
-            },
-        });
-
-        const result = await chat.sendMessage(message);
-        const responseText = result.response.text();
-
-        // Add AI response to history
-        session.messages.push({ role: 'model', content: responseText });
-
-        // Update title if it's the first message exchange and still default
-        if (session.messages.length <= 2 && session.title === 'New Conversation') {
-            session.title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
-        }
-
+        // Save user message immediately so it persists even if AI fails
         session.updatedAt = Date.now();
         await session.save();
 
-        res.json({
-            response: responseText,
-            sessionId: session._id,
-            sessionTitle: session.title
-        });
+        try {
+            // Prepare history for Gemini
+            // Map 'model' role to Gemini's 'model' and 'user' to 'user'
+            const history = session.messages.map(msg => ({
+                role: msg.role === 'ai' ? 'model' : msg.role,
+                parts: [{ text: msg.content }]
+            }));
+
+            const model = genAI.getGenerativeModel({
+                model: "gemini-1.5-flash",
+                systemInstruction: SYSTEM_INSTRUCTION
+            });
+
+            const chat = model.startChat({
+                history: history.slice(0, -1), // Send all but the last one which is the new prompt
+                generationConfig: {
+                    maxOutputTokens: 1000,
+                },
+            });
+
+            const result = await chat.sendMessage(message);
+            const responseText = result.response.text();
+
+            // Add AI response to history
+            session.messages.push({ role: 'model', content: responseText });
+
+            // Update title if it's the first message exchange and still default
+            if (session.messages.length <= 2 && session.title === 'New Conversation') {
+                session.title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+            }
+
+            session.updatedAt = Date.now();
+            await session.save();
+
+            res.json({
+                response: responseText,
+                sessionId: session._id,
+                sessionTitle: session.title
+            });
+        } catch (aiError) {
+            console.error('Gemini API Error:', aiError);
+            // Return success but with a placeholder/error message from AI so frontend doesn't break
+            // Or we can return the saved session but indicate AI failed.
+            // For now, let's append a system error message to the chat so the user knows.
+
+            const errorMessage = "I'm having trouble connecting right now. Please try again later.";
+            session.messages.push({ role: 'model', content: errorMessage });
+            await session.save();
+
+            res.json({
+                response: errorMessage,
+                sessionId: session._id,
+                sessionTitle: session.title
+            });
+        }
 
     } catch (error) {
         console.error('Error in AI chat:', error);
-        res.status(500).json({ message: 'Error communicating with AI service' });
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

@@ -23,9 +23,11 @@ export default function Community() {
     })
     const [activeTab, setActiveTab] = useState("posts") // "posts" or "users"
     const [loading, setLoading] = useState(false)
+    const [dmContacts, setDmContacts] = useState([])
 
     useEffect(() => {
         fetchPosts()
+        fetchConversations()
     }, [])
 
     useEffect(() => {
@@ -43,6 +45,26 @@ export default function Community() {
             console.error("Error fetching posts:", error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchConversations = async () => {
+        try {
+            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/conversations`)
+            // Backend returns: { id, name, email, role, lastMessage, timestamp, unread }
+            const formatted = data.map(c => ({
+                id: c.id,
+                name: c.name,
+                avatar: c.name ? c.name.substring(0, 2).toUpperCase() : "??",
+                lastMessage: c.lastMessage,
+                time: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                unread: c.unread,
+                online: false, // We don't have online status yet without socket here
+                color: "bg-blue-500"
+            })).slice(0, 5) // Show top 5
+            setDmContacts(formatted)
+        } catch (error) {
+            console.error("Error fetching conversations:", error)
         }
     }
 
@@ -372,9 +394,95 @@ export default function Community() {
                             )}
                         </div>
 
-                        {/* Right Sidebar */}
+                        {/* Right Sidebar - DM Section */}
                         <div className="xl:col-span-4 hidden xl:block">
-                            {/* Suggested or Other Content */}
+                            <div className="sticky top-28">
+                                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-[#2d2d2d]">Direct Messages</h3>
+                                        <button
+                                            onClick={() => navigate('/direct-messages')}
+                                            className="text-sm text-[#e74c3c] font-medium hover:text-[#c0392b] transition-colors"
+                                        >
+                                            View All
+                                        </button>
+                                    </div>
+
+                                    {dmContacts.length === 0 ? (
+                                        <p className="text-sm text-gray-500 text-center py-4">No recent conversations</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {dmContacts.map((contact) => (
+                                                <button
+                                                    key={contact.id}
+                                                    onClick={() => navigate('/direct-messages', { state: { selectedUser: contact } })}
+                                                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                                                >
+                                                    <div className="relative">
+                                                        <div className={`w-12 h-12 ${contact.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                                            <span className="text-white font-bold text-sm">{contact.avatar}</span>
+                                                        </div>
+                                                        {contact.online && (
+                                                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 text-left">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <h4 className="font-semibold text-[#2d2d2d] text-sm truncate">
+                                                                {contact.name}
+                                                            </h4>
+                                                            {contact.unread > 0 && (
+                                                                <span className="w-5 h-5 bg-[#e74c3c] text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                                                                    {contact.unread}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="text-xs text-gray-500 truncate">
+                                                                {contact.lastMessage}
+                                                            </p>
+                                                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                                                {contact.time}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Suggested Connections */}
+                                <div className="bg-white rounded-2xl p-6 shadow-sm mt-6">
+                                    <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">Suggested Connections</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                                                <span className="text-white font-bold text-sm">JD</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold text-[#2d2d2d] text-sm">Dr. John Davis</h4>
+                                                <p className="text-xs text-gray-500">Psychiatrist</p>
+                                            </div>
+                                            <button className="px-3 py-1 bg-[#e74c3c] text-white rounded-lg text-xs font-medium hover:bg-[#c0392b] transition-colors">
+                                                Follow
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center">
+                                                <span className="text-white font-bold text-sm">LM</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold text-[#2d2d2d] text-sm">Lisa Martinez</h4>
+                                                <p className="text-xs text-gray-500">Life Coach</p>
+                                            </div>
+                                            <button className="px-3 py-1 bg-[#e74c3c] text-white rounded-lg text-xs font-medium hover:bg-[#c0392b] transition-colors">
+                                                Follow
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
