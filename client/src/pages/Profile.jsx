@@ -121,17 +121,26 @@ export default function Profile() {
                 </div>
 
                 {!isOwnProfile && (
-                  <button
-                    onClick={handleFollow}
-                    className={`px-6 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 ${
-                      isFollowing
-                      ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      : 'bg-[#e74c3c] text-white hover:bg-[#c0392b]'
-                    }`}
-                  >
-                    {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                    {isFollowing ? 'Unfollow' : 'Follow'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleFollow}
+                      className={`px-6 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 ${
+                        isFollowing
+                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        : 'bg-[#e74c3c] text-white hover:bg-[#c0392b]'
+                      }`}
+                    >
+                      {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                      {isFollowing ? 'Unfollow' : 'Follow'}
+                    </button>
+                    <button
+                      onClick={() => navigate('/direct-messages', { state: { selectedUser: profileData } })}
+                      className="px-6 py-2 border border-[#e74c3c] text-[#e74c3c] rounded-xl font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Message
+                    </button>
+                  </div>
                 )}
 
                 {isOwnProfile && (

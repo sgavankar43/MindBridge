@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken'); // Import JWT for socket auth
 require('dotenv').config();
 
 const app = express();
@@ -131,29 +132,37 @@ const io = new Server(server, {
     }
 });
 
-// Store socket instances for easy access in routes if needed,
-// or just use io instance
+// Store socket instances for easy access in routes if needed
 app.set('io', io);
+
+// Socket middleware for authentication
+io.use((socket, next) => {
+    // Check for token in handshake auth object or headers
+    const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+        return next(new Error("Authentication error: No token provided"));
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = decoded; // Attach user data to socket
+        next();
+    } catch (err) {
+        return next(new Error("Authentication error: Invalid token"));
+    }
+});
 
 // Socket connection handling
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    console.log('User connected:', socket.id, 'User ID:', socket.user.userId);
 
-    // Join a personal room for private messaging
-    socket.on('join_user_room', (userId) => {
-        if (userId) {
-            socket.join(userId);
-            console.log(`User ${userId} joined their room`);
-        }
-    });
-
-    socket.on('send_message', (data) => {
-        // Broadcast to the recipient's room
-        // data should contain { recipientId, message }
-        if (data.recipientId) {
-            io.to(data.recipientId).emit('receive_message', data);
-        }
-    });
+    // Automatically join the user's room based on their authenticated ID
+    // We use socket.user.userId from the JWT payload
+    if (socket.user && socket.user.userId) {
+        socket.join(socket.user.userId);
+        console.log(`User ${socket.user.userId} joined their room`);
+    }
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);

@@ -24,6 +24,8 @@ export default function Community() {
     const [activeTab, setActiveTab] = useState("posts") // "posts" or "users"
     const [loading, setLoading] = useState(false)
     const [dmContacts, setDmContacts] = useState([])
+    const [activeCommentId, setActiveCommentId] = useState(null)
+    const [commentText, setCommentText] = useState("")
 
     useEffect(() => {
         fetchPosts()
@@ -144,6 +146,33 @@ export default function Community() {
             }))
         } catch (error) {
             console.error("Error liking post:", error)
+        }
+    }
+
+    const handleComment = async (postId) => {
+        if (!commentText.trim()) return
+
+        try {
+            const newComment = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts/${postId}/comments`, {
+                method: 'POST',
+                body: JSON.stringify({ content: commentText })
+            });
+
+            if (newComment) {
+                setPosts(posts.map(post => {
+                    if (post._id === postId) {
+                        return {
+                            ...post,
+                            comments: [...post.comments, newComment]
+                        }
+                    }
+                    return post
+                }))
+                setCommentText("")
+                // Don't close immediately, user might want to see it
+            }
+        } catch (error) {
+            console.error("Error commenting on post:", error)
         }
     }
 
@@ -350,11 +379,55 @@ export default function Community() {
                                                     <span className="text-sm font-medium">{post.likes.length}</span>
                                                 </button>
 
-                                                <button className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors">
+                                                <button
+                                                    onClick={() => setActiveCommentId(activeCommentId === post._id ? null : post._id)}
+                                                    className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors"
+                                                >
                                                     <MessageCircle className="w-5 h-5" />
                                                     <span className="text-sm font-medium">{post.comments.length}</span>
                                                 </button>
                                             </div>
+
+                                            {/* Comment Section */}
+                                            {activeCommentId === post._id && (
+                                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                                    <div className="space-y-4 mb-4">
+                                                        {post.comments.map((comment) => (
+                                                            <div key={comment._id} className="flex gap-3">
+                                                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs">
+                                                                    {comment.author?.name?.[0] || 'U'}
+                                                                </div>
+                                                                <div className="bg-gray-50 px-4 py-2 rounded-xl text-sm">
+                                                                    <span className="font-semibold block">{comment.author?.name || 'User'}</span>
+                                                                    <p>{comment.content}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex gap-3">
+                                                        <div className="w-8 h-8 bg-[#e74c3c] rounded-full flex items-center justify-center flex-shrink-0">
+                                                            <span className="text-white font-bold text-xs">{user?.name?.[0] || 'U'}</span>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <input
+                                                                type="text"
+                                                                value={commentText}
+                                                                onChange={(e) => setCommentText(e.target.value)}
+                                                                onKeyDown={(e) => e.key === 'Enter' && handleComment(post._id)}
+                                                                placeholder="Write a comment..."
+                                                                className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                                                            />
+                                                            <button
+                                                                onClick={() => handleComment(post._id)}
+                                                                disabled={!commentText.trim()}
+                                                                className="mt-2 px-4 py-1.5 bg-[#e74c3c] text-white rounded-lg text-sm font-medium hover:bg-[#c0392b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                            >
+                                                                <Send className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

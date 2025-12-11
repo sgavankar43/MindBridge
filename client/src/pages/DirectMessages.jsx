@@ -32,7 +32,10 @@ export default function DirectMessages() {
     useEffect(() => {
         // Initialize socket connection
         const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5002", {
-            withCredentials: true
+            withCredentials: true,
+            auth: {
+                token: localStorage.getItem('token')
+            }
         });
 
         socketRef.current = socket;
