@@ -3,6 +3,29 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { upload } = require('../config/cloudinary');
 
+// Safe Structured Logger
+const logger = {
+    info: (message, meta = {}) => {
+        if (process.env.NODE_ENV === 'production') {
+            const safeMeta = { ...meta };
+            // Redact sensitive fields
+            if (safeMeta.email) safeMeta.email = '[REDACTED]';
+            if (safeMeta.userId) safeMeta.userId = '[REDACTED]';
+            if (safeMeta.body) safeMeta.body = '[REDACTED]';
+            console.info(JSON.stringify({ level: 'info', message, timestamp: new Date().toISOString(), ...safeMeta }));
+        } else {
+            console.log(`[INFO] ${message}`, meta);
+        }
+    },
+    error: (message, error) => {
+        if (process.env.NODE_ENV === 'production') {
+            console.error(JSON.stringify({ level: 'error', message, timestamp: new Date().toISOString(), error: error.message }));
+        } else {
+            console.error(`[ERROR] ${message}`, error);
+        }
+    }
+};
+
 // Generate JWT token
 const generateToken = (userId) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -10,7 +33,7 @@ const generateToken = (userId) => {
 
 exports.register = async (req, res) => {
     try {
-        console.log('📝 Registration attempt:', req.body);
+        logger.info('Registration attempt', { body: req.body });
         const {
             name, email, password, role, profession, bio,
             location, consultationFees, languages
@@ -60,7 +83,7 @@ exports.register = async (req, res) => {
         });
 
         await user.save();
-        console.log('✅ User created successfully:', user.email);
+        logger.info('User created successfully', { email: user.email });
 
         // Generate token
         const token = generateToken(user._id);
@@ -74,7 +97,7 @@ exports.register = async (req, res) => {
             user: userData
         });
     } catch (error) {
-        console.error('❌ Registration error:', error);
+        logger.error('Registration error', error);
 
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Email already exists' });
@@ -91,7 +114,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
     try {
-        console.log('🔐 Login attempt:', req.body.email);
+        logger.info('Login attempt', { email: req.body.email });
         const { email, password } = req.body;
 
         // Validation
@@ -127,7 +150,7 @@ exports.login = async (req, res) => {
 
         // Update last login
         await user.updateLastLogin();
-        console.log('✅ User logged in successfully:', user.email);
+        logger.info('User logged in successfully', { email: user.email });
 
         // Generate token
         const token = generateToken(user._id);
@@ -141,7 +164,7 @@ exports.login = async (req, res) => {
             user: userData
         });
     } catch (error) {
-        console.error('❌ Login error:', error);
+        logger.error('Login error', error);
         res.status(500).json({ message: 'Login failed' });
     }
 };
@@ -151,7 +174,7 @@ exports.getMe = async (req, res) => {
         const userData = req.user.getPublicProfile();
         res.json({ user: userData });
     } catch (error) {
-        console.error('❌ Get user error:', error);
+        logger.error('Get user error', error);
         res.status(500).json({ message: 'Failed to get user data' });
     }
 };
@@ -160,10 +183,10 @@ exports.logout = async (req, res) => {
     try {
         // In JWT, logout is mainly handled client-side by removing the token
         // But we can log it for analytics
-        console.log('👋 User logged out:', req.user._id);
+        logger.info('User logged out', { userId: req.user._id });
         res.json({ message: 'Logout successful' });
     } catch (error) {
-        console.error('❌ Logout error:', error);
+        logger.error('Logout error', error);
         res.status(500).json({ message: 'Logout failed' });
     }
 };

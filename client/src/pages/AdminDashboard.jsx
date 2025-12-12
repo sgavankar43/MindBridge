@@ -35,6 +35,7 @@ export default function AdminDashboard() {
         try {
             await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/admin/therapist/${id}/verify`, {
                 method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             })
             // Refresh list
