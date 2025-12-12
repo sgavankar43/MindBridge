@@ -1,30 +1,76 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
+import { Header } from "@/components/Header"
+import { useUser } from "../context/UserContext"
+import { apiRequest } from "../config/api"
 import {
   Mail, Phone, Linkedin, Github, Globe,
   Camera, Edit2, MapPin, Briefcase,
-  Award, Target, CheckCircle, Shield
+  Award, Target, CheckCircle, Shield, Settings,
+  UserPlus, UserMinus
 } from "lucide-react"
 
 export default function Profile() {
-  const [activeTab, setActiveTab] = useState("personal")
-  const [isEditing, setIsEditing] = useState({
-    personal: false,
-    business: false
-  })
+  const navigate = useNavigate()
+  const { user: currentUser } = useUser()
+  const [searchParams] = useSearchParams()
+  const profileId = searchParams.get("id") || currentUser?._id
 
-  const tabs = [
-    { id: "personal", label: "Personal & Business" },
-    { id: "verification", label: "Verification & KYC" },
-    { id: "skills", label: "Skills & Focus" }
-  ]
+  const [profileData, setProfileData] = useState(null)
+  const [posts, setPosts] = useState([])
+  const [comments, setComments] = useState([])
+  const [activeTab, setActiveTab] = useState("posts")
+  const [loading, setLoading] = useState(true)
+  const [isFollowing, setIsFollowing] = useState(false)
 
-  const toggleEdit = (section) => {
-    setIsEditing(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }))
+  const isOwnProfile = !searchParams.get("id") || searchParams.get("id") === currentUser?._id
+
+  useEffect(() => {
+    fetchProfile()
+  }, [profileId])
+
+  const fetchProfile = async () => {
+    try {
+      const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/${profileId}/profile`)
+      setProfileData(data.user)
+      setPosts(data.posts)
+      setComments(data.comments)
+
+      if (currentUser && data.user.followers) {
+        setIsFollowing(data.user.followers.includes(currentUser._id))
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFollow = async () => {
+    try {
+      const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/${profileId}/follow`, {
+        method: 'PUT'
+      })
+      setIsFollowing(data.isFollowing)
+      // Update local follower count
+      setProfileData(prev => ({
+        ...prev,
+        followers: data.isFollowing
+          ? [...prev.followers, currentUser._id]
+          : prev.followers.filter(id => id !== currentUser._id)
+      }))
+    } catch (error) {
+      console.error("Error toggling follow:", error)
+    }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen bg-[#f5f0e8]">Loading...</div>
+  }
+
+  if (!profileData) {
+    return <div className="flex justify-center items-center h-screen bg-[#f5f0e8]">User not found</div>
   }
 
   return (
@@ -34,440 +80,226 @@ export default function Profile() {
       <div className="flex-1 lg:ml-16 p-3 sm:p-4 lg:p-8 pt-28">
         <Header />
 
-        <div className="mt-4 sm:mt-8">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#2d2d2d] mb-4 sm:mb-6">Profile Settings</h2>
+        <div className="mt-4 sm:mt-8 max-w-6xl mx-auto">
+          {/* Profile Header Card */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="relative">
+                <div className="w-32 h-32 bg-[#e74c3c] rounded-full flex items-center justify-center text-4xl text-white font-bold">
+                  {profileData.name?.[0]}
+                </div>
+                {isOwnProfile && (
+                  <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg border border-gray-100">
+                    <Camera className="w-5 h-5 text-gray-600" />
+                  </button>
+                )}
+              </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-            {/* Left Panel - Profile Card */}
-            <div className="lg:col-span-4">
-              <div className="bg-white rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm">
-                {/* Avatar Section */}
-                <div className="flex flex-col items-center mb-6">
-                  <div className="relative mb-4">
-                    <div className="w-32 h-32 bg-[#e74c3c] rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-4xl">JD</span>
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-colors border-2 border-[#f5f0e8]">
-                      <Camera className="w-4 h-4 text-gray-600" />
+              <div className="flex-1 text-center md:text-left">
+                <h1 className="text-2xl font-bold text-[#2d2d2d] mb-1">{profileData.name}</h1>
+                <p className="text-gray-500 mb-2">{profileData.profession || profileData.role}</p>
+                {profileData.location && (
+                  <div className="flex items-center justify-center md:justify-start gap-1 text-sm text-gray-500 mb-4">
+                    <MapPin className="w-4 h-4" />
+                    <span>{profileData.location}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-center md:justify-start gap-8 mb-6">
+                  <div className="text-center">
+                    <span className="block font-bold text-lg">{profileData.followers?.length || 0}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Followers</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="block font-bold text-lg">{profileData.following?.length || 0}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Following</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="block font-bold text-lg">{posts.length}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Posts</span>
+                  </div>
+                </div>
+
+                {!isOwnProfile && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleFollow}
+                      className={`px-6 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 ${
+                        isFollowing
+                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        : 'bg-[#e74c3c] text-white hover:bg-[#c0392b]'
+                      }`}
+                    >
+                      {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                      {isFollowing ? 'Unfollow' : 'Follow'}
+                    </button>
+                    <button
+                      onClick={() => navigate('/direct-messages', { state: { selectedUser: profileData } })}
+                      className="px-6 py-2 border border-[#e74c3c] text-[#e74c3c] rounded-xl font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Message
                     </button>
                   </div>
+                )}
 
-                  <h3 className="text-xl font-bold text-[#2d2d2d] mb-1">John Doe</h3>
-                  <p className="text-sm text-gray-500 mb-4">Senior Product Designer</p>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => navigate('/settings')}
+                    className="px-6 py-2 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Edit Profile
+                  </button>
+                )}
+              </div>
+            </div>
 
-                  <div className="w-full h-px bg-gray-100 my-4" />
+            {profileData.bio && (
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <p className="text-gray-600 text-center md:text-left">{profileData.bio}</p>
+              </div>
+            )}
+          </div>
 
-                  {/* Contact Info */}
-                  <div className="w-full space-y-3 mb-6">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
-                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                        <Mail className="w-4 h-4 text-gray-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400">Email</p>
-                        <p className="text-sm text-[#2d2d2d] truncate">john.doe@example.com</p>
-                      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content (Posts/Comments) */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="flex border-b border-gray-100">
+                  <button
+                    onClick={() => setActiveTab('posts')}
+                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'posts' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Posts
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('comments')}
+                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'comments' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Comments
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('about')}
+                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'about' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    About
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  {activeTab === 'posts' && (
+                    <div className="space-y-6">
+                      {posts.length === 0 ? (
+                        <p className="text-center text-gray-500">No posts yet.</p>
+                      ) : (
+                        posts.map(post => (
+                          <div key={post._id} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
+                            <p className="text-gray-800 mb-2">{post.content}</p>
+                            {post.image && (
+                                <img src={post.image} alt="Post" className="rounded-xl mt-2 max-h-60 object-cover" />
+                            )}
+                            <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                              <span>{post.likes.length} Likes</span>
+                              <span>{post.comments.length} Comments</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
+                  )}
 
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
-                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                        <Phone className="w-4 h-4 text-gray-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400">Phone</p>
-                        <p className="text-sm text-[#2d2d2d]">+1 (555) 123-4567</p>
-                      </div>
+                  {activeTab === 'comments' && (
+                    <div className="space-y-6">
+                      {comments.length === 0 ? (
+                        <p className="text-center text-gray-500">No comments yet.</p>
+                      ) : (
+                        comments.map(comment => (
+                          <div key={comment._id} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
+                            <p className="text-gray-800 mb-2">"{comment.content}"</p>
+                            <p className="text-xs text-gray-400">
+                              on post by {comment.post?.author?.name || 'Unknown'} • {new Date(comment.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))
+                      )}
                     </div>
-                  </div>
+                  )}
 
-                  <div className="w-full h-px bg-gray-100 my-4" />
-
-                  {/* Social Links */}
-                  <div className="w-full">
-                    <h4 className="text-xs font-medium text-gray-400 mb-3">SOCIAL LINKS</h4>
-                    <div className="space-y-2">
-                      <a href="#" className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                        <div className="w-8 h-8 bg-[#0077b5] rounded-lg flex items-center justify-center">
-                          <Linkedin className="w-4 h-4 text-white" />
+                  {activeTab === 'about' && (
+                     <div className="space-y-4">
+                        <div>
+                            <h3 className="font-semibold mb-2">Details</h3>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="text-gray-500 block">Role</span>
+                                    <span className="capitalize">{profileData.role}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 block">Joined</span>
+                                    <span>{new Date(profileData.createdAt).toLocaleDateString()}</span>
+                                </div>
+                                {profileData.languages && profileData.languages.length > 0 && (
+                                    <div>
+                                        <span className="text-gray-500 block">Languages</span>
+                                        <span>{profileData.languages.join(', ')}</span>
+                                    </div>
+                                )}
+                                {profileData.consultationFees && (
+                                    <div>
+                                        <span className="text-gray-500 block">Fees</span>
+                                        <span>${profileData.consultationFees}/hr</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <span className="text-sm text-[#2d2d2d]">LinkedIn</span>
-                      </a>
-
-                      <a href="#" className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                        <div className="w-8 h-8 bg-[#333] rounded-lg flex items-center justify-center">
-                          <Github className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-sm text-[#2d2d2d]">GitHub</span>
-                      </a>
-
-                      <a href="#" className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                        <div className="w-8 h-8 bg-[#3498db] rounded-lg flex items-center justify-center">
-                          <Globe className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-sm text-[#2d2d2d]">Website</span>
-                      </a>
-                    </div>
-                  </div>
+                     </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Right Panel - Profile Details */}
-            <div className="lg:col-span-8">
-              <div className="bg-white rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm">
-                {/* Tab Navigation */}
-                <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-8 p-1 bg-gray-50 rounded-xl sm:rounded-2xl overflow-x-auto">
-                  {tabs.map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex-1 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
-                          ? 'bg-[#e74c3c] text-white shadow-sm'
-                          : 'text-gray-600 hover:text-[#2d2d2d]'
-                        }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Tab Content */}
-                <div className="space-y-6">
-                  {/* Personal & Business Tab */}
-                  {activeTab === "personal" && (
-                    <div className="space-y-6 animate-fadeIn">
-                      {/* Personal Information */}
-                      <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
-                          <h3 className="text-base sm:text-lg font-semibold text-[#2d2d2d]">Personal Information</h3>
-                          <button
-                            onClick={() => toggleEdit('personal')}
-                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white rounded-lg sm:rounded-xl hover:bg-gray-100 transition-colors self-start sm:self-auto"
-                          >
-                            <Edit2 className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm text-gray-600">
-                              {isEditing.personal ? 'Save' : 'Edit'}
-                            </span>
-                          </button>
+            {/* Right Side - Info */}
+            <div className="lg:col-span-1 space-y-6">
+               {/* Verification Badge */}
+               {profileData.role === 'therapist' && (
+                 <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <h3 className="font-semibold mb-4">Verification Status</h3>
+                    {profileData.verificationStatus === 'approved' ? (
+                        <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl">
+                            <CheckCircle className="w-5 h-5" />
+                            <span className="font-medium">Verified Therapist</span>
                         </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-xs text-gray-400 mb-2 block">Full Name</label>
-                            {isEditing.personal ? (
-                              <input
-                                type="text"
-                                defaultValue="John Doe"
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <p className="text-sm text-[#2d2d2d] font-medium">John Doe</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-2 block">Email Address</label>
-                            {isEditing.personal ? (
-                              <input
-                                type="email"
-                                defaultValue="john.doe@example.com"
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <p className="text-sm text-[#2d2d2d] font-medium">john.doe@example.com</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-2 block">Phone Number</label>
-                            {isEditing.personal ? (
-                              <input
-                                type="tel"
-                                defaultValue="+1 (555) 123-4567"
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <p className="text-sm text-[#2d2d2d] font-medium">+1 (555) 123-4567</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-2 block">Location</label>
-                            {isEditing.personal ? (
-                              <input
-                                type="text"
-                                defaultValue="San Francisco, CA"
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-gray-400" />
-                                <p className="text-sm text-[#2d2d2d] font-medium">San Francisco, CA</p>
-                              </div>
-                            )}
-                          </div>
+                    ) : (
+                        <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 p-3 rounded-xl">
+                            <Shield className="w-5 h-5" />
+                            <span className="font-medium capitalize">{profileData.verificationStatus || 'Pending'}</span>
                         </div>
-                      </div>
+                    )}
+                 </div>
+               )}
 
-                      {/* Business Information */}
-                      <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
-                          <h3 className="text-base sm:text-lg font-semibold text-[#2d2d2d]">Business Information</h3>
-                          <button
-                            onClick={() => toggleEdit('business')}
-                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white rounded-lg sm:rounded-xl hover:bg-gray-100 transition-colors self-start sm:self-auto"
-                          >
-                            <Edit2 className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm text-gray-600">
-                              {isEditing.business ? 'Save' : 'Edit'}
-                            </span>
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="text-xs text-gray-400 mb-2 block">Company Name</label>
-                            {isEditing.business ? (
-                              <input
-                                type="text"
-                                defaultValue="TechCorp Inc."
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <Briefcase className="w-4 h-4 text-gray-400" />
-                                <p className="text-sm text-[#2d2d2d] font-medium">TechCorp Inc.</p>
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-2 block">Industry</label>
-                            {isEditing.business ? (
-                              <input
-                                type="text"
-                                defaultValue="Technology & Software"
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <p className="text-sm text-[#2d2d2d] font-medium">Technology & Software</p>
-                            )}
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="text-xs text-gray-400 mb-2 block">Experience</label>
-                            {isEditing.business ? (
-                              <input
-                                type="text"
-                                defaultValue="8+ years in Product Design"
-                                className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                              />
-                            ) : (
-                              <p className="text-sm text-[#2d2d2d] font-medium">8+ years in Product Design</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-gray-400 mb-2 block">About Company</label>
-                          {isEditing.business ? (
-                            <textarea
-                              defaultValue="Leading technology company focused on innovative solutions for modern businesses. Specializing in SaaS products and digital transformation."
-                              rows={3}
-                              className="w-full px-4 py-2 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c] resize-none"
-                            />
-                          ) : (
-                            <p className="text-sm text-gray-600 leading-relaxed">
-                              Leading technology company focused on innovative solutions for modern businesses.
-                              Specializing in SaaS products and digital transformation.
-                            </p>
-                          )}
-                        </div>
-                      </div>
+               {/* Contact Info */}
+               <div className="bg-white rounded-2xl p-6 shadow-sm">
+                 <h3 className="font-semibold mb-4">Contact</h3>
+                 <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span>{profileData.email}</span>
                     </div>
-                  )}
-
-                  {/* Verification & KYC Tab */}
-                  {activeTab === "verification" && (
-                    <div className="space-y-6 animate-fadeIn">
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <h3 className="text-lg font-semibold text-[#2d2d2d] mb-6">Verification Status</h3>
-
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between p-4 bg-white rounded-xl">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-[#2d2d2d]">Email Verified</p>
-                                <p className="text-xs text-gray-400">Verified on Jan 15, 2024</p>
-                              </div>
-                            </div>
-                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                              Verified
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between p-4 bg-white rounded-xl">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-[#2d2d2d]">Phone Verified</p>
-                                <p className="text-xs text-gray-400">Verified on Jan 15, 2024</p>
-                              </div>
-                            </div>
-                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                              Verified
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between p-4 bg-white rounded-xl">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                                <Shield className="w-5 h-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-[#2d2d2d]">Identity Verification</p>
-                                <p className="text-xs text-gray-400">Government ID required</p>
-                              </div>
-                            </div>
-                            <button className="px-4 py-2 bg-[#e74c3c] text-white text-xs font-medium rounded-xl hover:bg-[#c0392b] transition-colors">
-                              Start Verification
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">KYC Documents</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Upload your documents to complete the KYC verification process.
-                        </p>
-
-                        <div className="space-y-3">
-                          <button className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-[#e74c3c] transition-colors">
-                            <p className="text-sm text-gray-600">Click to upload Government ID</p>
-                            <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
-                          </button>
-
-                          <button className="w-full p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-[#e74c3c] transition-colors">
-                            <p className="text-sm text-gray-600">Click to upload Proof of Address</p>
-                            <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Skills & Focus Tab */}
-                  {activeTab === "skills" && (
-                    <div className="space-y-6 animate-fadeIn">
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-lg font-semibold text-[#2d2d2d]">Professional Skills</h3>
-                          <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl hover:bg-gray-100 transition-colors">
-                            <Edit2 className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm text-gray-600">Edit</span>
-                          </button>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {['UI/UX Design', 'Product Strategy', 'Figma', 'Adobe XD', 'Prototyping',
-                            'User Research', 'Wireframing', 'Design Systems'].map((skill, idx) => (
-                              <span
-                                key={idx}
-                                className="px-4 py-2 bg-white text-sm text-[#2d2d2d] rounded-xl"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-lg font-semibold text-[#2d2d2d]">Focus Areas</h3>
-                          <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl hover:bg-gray-100 transition-colors">
-                            <Edit2 className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm text-gray-600">Edit</span>
-                          </button>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-3 p-4 bg-white rounded-xl">
-                            <div className="w-10 h-10 bg-[#e74c3c] rounded-xl flex items-center justify-center flex-shrink-0">
-                              <Target className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium text-[#2d2d2d] mb-1">Product Design</h4>
-                              <p className="text-xs text-gray-600">
-                                Creating intuitive and beautiful user experiences for web and mobile applications
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-3 p-4 bg-white rounded-xl">
-                            <div className="w-10 h-10 bg-[#3498db] rounded-xl flex items-center justify-center flex-shrink-0">
-                              <Award className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium text-[#2d2d2d] mb-1">Design Leadership</h4>
-                              <p className="text-xs text-gray-600">
-                                Leading design teams and establishing design systems for scalable products
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">Certifications</h3>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-4 bg-white rounded-xl">
-                            <div>
-                              <p className="text-sm font-medium text-[#2d2d2d]">Google UX Design Certificate</p>
-                              <p className="text-xs text-gray-400">Issued: March 2023</p>
-                            </div>
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                          </div>
-
-                          <div className="flex items-center justify-between p-4 bg-white rounded-xl">
-                            <div>
-                              <p className="text-sm font-medium text-[#2d2d2d]">Certified Scrum Product Owner</p>
-                              <p className="text-xs text-gray-400">Issued: January 2023</p>
-                            </div>
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                 </div>
+               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out forwards;
-        }
-      `}</style>
     </div>
   )
 }

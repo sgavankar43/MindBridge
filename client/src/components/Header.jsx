@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from "react"
-import { Search, Bell, Menu, X } from "lucide-react"
+import { Search, Bell, Menu, X, LogOut, User } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useSidebar } from "@/context/SidebarContext"
+import { useUser } from "../context/UserContext"
 
 export function Header() {
   const { toggleSidebar } = useSidebar()
+  const { user, logout } = useUser()
   const navigate = useNavigate()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const notificationRef = useRef(null)
+  const profileRef = useRef(null)
 
   // Dummy notifications data
   const notifications = [
@@ -55,22 +59,35 @@ export function Header() {
 
   const unreadCount = notifications.filter(n => n.unread).length
 
-  // Close notification panel when clicking outside
+  // Close panels when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false)
       }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false)
+      }
     }
 
-    if (showNotifications) {
+    if (showNotifications || showProfileMenu) {
       document.addEventListener("mousedown", handleClickOutside)
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
-  }, [showNotifications])
+  }, [showNotifications, showProfileMenu])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const getUserInitials = () => {
+    if (!user?.name) return 'U'
+    return user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
 
   return (
     <header className="fixed top-0 left-0 lg:left-16 right-0 z-40 h-20 bg-transparent flex items-center justify-between px-4 lg:px-8">
@@ -178,13 +195,80 @@ export function Header() {
           )}
         </div>
 
-        {/* Avatar */}
-        <button
-          onClick={() => navigate('/profile')}
-          className="w-10 h-10 bg-[#e74c3c] rounded-full flex items-center justify-center hover:bg-[#c0392b] transition-colors cursor-pointer"
-        >
-          <span className="text-white font-bold text-sm">U</span>
-        </button>
+        {/* Profile Menu */}
+        <div className="relative" ref={profileRef}>
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="w-10 h-10 bg-[#e74c3c] rounded-full flex items-center justify-center hover:bg-[#c0392b] transition-colors cursor-pointer"
+          >
+            <span className="text-white font-bold text-sm">{getUserInitials()}</span>
+          </button>
+
+          {/* Profile Dropdown */}
+          {showProfileMenu && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              {/* User Info */}
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#e74c3c] rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold">{getUserInitials()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-[#2d2d2d] truncate">
+                      {user?.name || 'User'}
+                    </h3>
+                    <p className="text-sm text-gray-500 truncate">
+                      {user?.email || 'user@example.com'}
+                    </p>
+                    {user?.role && (
+                      <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full mt-1 capitalize">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Menu Items */}
+              <div className="py-2">
+                <button
+                  onClick={() => {
+                    navigate('/profile')
+                    setShowProfileMenu(false)
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3"
+                >
+                  <User className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-[#2d2d2d]">View Profile</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    navigate('/settings')
+                    setShowProfileMenu(false)
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3"
+                >
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="text-sm text-[#2d2d2d]">Settings</span>
+                </button>
+
+                <div className="border-t border-gray-100 mt-2 pt-2">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-3 text-left hover:bg-red-50 transition-colors flex items-center gap-3 text-red-600"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="text-sm">Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )
