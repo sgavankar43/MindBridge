@@ -1,6 +1,11 @@
 const User = require('../models/User');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
+const mongoose = require('mongoose');
+
+const escapeRegex = (text) => {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
 
 exports.searchUsers = async (req, res) => {
     try {
@@ -16,42 +21,19 @@ exports.searchUsers = async (req, res) => {
         let filter = {};
 
         // Keyword search
-        if (query) {
-            filter.$or = [
-                { name: { $regex: query, $options: 'i' } },
-                { bio: { $regex: query, $options: 'i' } },
-                { profession: { $regex: query, $options: 'i' } }
-            ];
-        }
-
-        // Filters
-        if (role) {
-            filter.role = role;
-            // If searching for therapists, they must be approved
-            if (role === 'therapist') {
-                filter.verificationStatus = 'approved';
+        if (query && typeof query === 'string' && query.trim()) {
+            if (query.length > 100) {
+                return res.status(400).json({ message: 'Search query too long' });
             }
-        } else {
-            // General search: if a user is a therapist, they must be approved to show up
-            // Users with other roles (like 'user') are shown
+            const escapedQuery = escapeRegex(query.trim());
             filter.$or = [
-                { role: { $ne: 'therapist' } },
-                { role: 'therapist', verificationStatus: 'approved' }
+                { name: { $regex: escapedQuery, $options: 'i' } },
+                { bio: { $regex: escapedQuery, $options: 'i' } },
+                { profession: { $regex: escapedQuery, $options: 'i' } }
             ];
-            // Re-apply query filter if it exists inside the $or for role logic?
-            // Actually, mongodb $or at top level for query vs role logic can be tricky.
-            // Let's structure it carefully.
-
-            // Simplified approach: Always hide unapproved therapists
-            // We use $and to combine the implicit AND of 'filter' object with our logic
-
-            // Current 'filter' contains query, location, etc.
-            // We want to add a condition: (role != therapist OR (role == therapist AND status == approved))
         }
 
-        // Apply mandatory filter: Hide pending/rejected therapists
-        // This effectively modifies the query to exclude unapproved therapists
-        // regardless of other filters
+        // Filters: Handle role and visibility
         const visibilityFilter = {
             $or: [
                 { role: { $ne: 'therapist' } },
@@ -59,29 +41,34 @@ exports.searchUsers = async (req, res) => {
             ]
         };
 
-        // If we already have a filter.role, we don't need the complex $or
-        // We just add verificationStatus = 'approved' if role is therapist
-
         if (role === 'therapist') {
+            filter.role = 'therapist';
             filter.verificationStatus = 'approved';
-        } else if (!role) {
-             // If no specific role requested, apply the visibility filter
-             // We need to merge this with existing 'filter'
-             // If filter has $or (from query), we need to be careful using $and
-             if (filter.$or) {
-                 filter = {
-                     $and: [
-                         filter,
-                         visibilityFilter
-                     ]
-                 };
-             } else {
-                 Object.assign(filter, visibilityFilter);
-             }
+        } else if (role) {
+            filter.role = role;
+        } else {
+            // No specific role requested: apply visibility filter to hide unapproved therapists
+            if (filter.$or) {
+                filter = {
+                    $and: [
+                        filter,
+                        visibilityFilter
+                    ]
+                };
+            } else {
+                Object.assign(filter, visibilityFilter);
+            }
         }
 
-        if (location) filter.location = { $regex: location, $options: 'i' };
-        if (language) filter.languages = { $regex: language, $options: 'i' };
+        if (location && typeof location === 'string' && location.trim()) {
+            if (location.length > 100) return res.status(400).json({ message: 'Location search too long' });
+            filter.location = { $regex: escapeRegex(location.trim()), $options: 'i' };
+        }
+
+        if (language && typeof language === 'string' && language.trim()) {
+            if (language.length > 100) return res.status(400).json({ message: 'Language search too long' });
+            filter.languages = { $regex: escapeRegex(language.trim()), $options: 'i' };
+        }
 
         if (minFees || maxFees) {
             filter.consultationFees = {};
@@ -151,3 +138,136 @@ exports.toggleFollow = async (req, res) => {
         res.status(500).json({ message: 'Error toggling follow' });
     }
 };
+
+exports.getSuggestedUsers = async (req, res) => {
+    try {
+        console.log('Fetching suggestions for user:', req.user?._id);
+        // Ensure exclude ID is an ObjectId
+        const excludeId = new mongoose.Types.ObjectId(req.user._id);
+
+        // Simple suggestion logic: Get 3 random users who are not the current user
+        // In a real app, this would use aggregation with $sample and exclude already followed users
+        const suggestions = await User.aggregate([
+            { $match: { _id: { $ne: excludeId } } }, // Exclude current user
+            { $sample: { size: 3 } }, // Random 3
+            { $project: { password: 0, verificationDocuments: 0 } } // Exclude sensitive fields
+        ]);
+
+        console.log('Suggestions found:', suggestions.length);
+        res.json(suggestions);
+    } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        res.status(500).json({ message: 'Error fetching suggestions' });
+    }
+};
+
+// Mental Health Profile Controllers
+
+exports.getMentalHealthProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('mentalHealthProfile');
+        res.json(user.mentalHealthProfile);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching mental health profile' });
+    }
+};
+
+exports.updateMood = async (req, res) => {
+    try {
+        const { mood } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user.mentalHealthProfile) {
+            user.mentalHealthProfile = {};
+        }
+        user.mentalHealthProfile.currentMood = mood;
+
+        await user.save();
+        res.json(user.mentalHealthProfile);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating mood' });
+    }
+};
+
+exports.addGoal = async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ message: 'Goal text is required' });
+
+        const user = await User.findById(req.user._id);
+
+        if (!user.mentalHealthProfile) {
+            user.mentalHealthProfile = { goals: [] };
+        }
+
+        const newGoal = {
+            title: text,
+            description: '',
+            completed: false,
+            createdAt: new Date()
+        };
+
+        user.mentalHealthProfile.goals.push(newGoal);
+        await user.save();
+
+        // Return the newly added goal (it will have an _id now)
+        res.json(user.mentalHealthProfile.goals[user.mentalHealthProfile.goals.length - 1]);
+    } catch (error) {
+        res.status(500).json({ message: 'Error adding goal' });
+    }
+};
+
+exports.toggleGoal = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findById(req.user._id);
+
+        const goal = user.mentalHealthProfile.goals.id(id);
+        if (!goal) return res.status(404).json({ message: 'Goal not found' });
+
+        goal.completed = !goal.completed;
+        await user.save();
+
+        res.json(goal);
+    } catch (error) {
+        res.status(500).json({ message: 'Error toggling goal' });
+    }
+};
+
+exports.deleteGoal = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findById(req.user._id);
+
+        user.mentalHealthProfile.goals.pull(id);
+        await user.save();
+
+        res.json({ message: 'Goal deleted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting goal' });
+    }
+};
+
+exports.updateStreak = async (req, res) => {
+    try {
+        // This accepts a direct streak update. 
+        // Ideally, this should be calculated server-side based on activity, but for now we follow the user request.
+        const { streak } = req.body;
+
+        const user = await User.findById(req.user._id);
+
+        if (streak > user.mentalHealthProfile.longestStreak) {
+            user.mentalHealthProfile.longestStreak = streak;
+        }
+        user.mentalHealthProfile.streakCount = streak;
+
+        await user.save();
+        res.json({
+            streakCount: user.mentalHealthProfile.streakCount,
+            longestStreak: user.mentalHealthProfile.longestStreak
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating streak' });
+    }
+};
+

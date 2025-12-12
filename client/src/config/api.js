@@ -13,7 +13,10 @@ export const API_ENDPOINTS = {
     PROFILE: `${API_BASE_URL}/api/users/profile`,
     PREFERENCES: `${API_BASE_URL}/api/users/preferences`,
     MENTAL_HEALTH: `${API_BASE_URL}/api/users/mental-health`,
-    GOALS: `${API_BASE_URL}/api/users/goals`,
+    GOALS: `${API_BASE_URL}/api/users/mental-health/goals`,
+    MOOD: `${API_BASE_URL}/api/users/mental-health/mood`,
+    STREAK: `${API_BASE_URL}/api/users/mental-health/streak`,
+    POSTS: `${API_BASE_URL}/api/posts`,
 
     // Health check
     HEALTH: `${API_BASE_URL}/api/health`,
@@ -32,8 +35,11 @@ export const getAuthHeaders = () => {
 // API helper function
 export const apiRequest = async (url, options = {}) => {
     const config = {
-        headers: getAuthHeaders(),
-        ...options
+        ...options,
+        headers: {
+            ...getAuthHeaders(),
+            ...options.headers
+        }
     };
 
     try {

@@ -36,8 +36,16 @@ export default function Login() {
         body: JSON.stringify(formData)
       })
 
+      // Validate API response structure
+      if (!data.user || !data.user.email || !data.user.name) {
+        throw new Error('Invalid server response: Missing user details')
+      }
+      if (!data.token || typeof data.token !== 'string' || !data.token.trim()) {
+        throw new Error('Invalid server response: Missing authentication token')
+      }
+
       // Use UserContext to handle login
-      login(data.user || { email: formData.email, name: 'User' }, data.token || 'mock-token')
+      login(data.user, data.token)
 
       setSuccess("Login successful! Redirecting...")
       setTimeout(() => {
