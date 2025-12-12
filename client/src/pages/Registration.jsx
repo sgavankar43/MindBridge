@@ -318,10 +318,11 @@ export default function Registration() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
+                      id="location"
                       type="text"
                       name="location"
                       value={formData.location}
@@ -334,14 +335,17 @@ export default function Registration() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fees ($/hr)</label>
+                    <label htmlFor="consultationFees" className="block text-sm font-medium text-gray-700 mb-2">Fees ($/hr)</label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
+                        id="consultationFees"
                         type="number"
                         name="consultationFees"
                         value={formData.consultationFees}
                         onChange={handleChange}
+                        min="0"
+                        step="0.01"
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
                         placeholder="0.00"
                       />
