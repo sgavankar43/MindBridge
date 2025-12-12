@@ -166,7 +166,12 @@ export default function Registration() {
         role: formData.role
       }
 
-      login(userData, responseData.token || 'mock-token')
+      if (!responseData.token) {
+        console.error('Registration failed: Missing authentication token in server response')
+        throw new Error('Registration successful but authentication failed. Please try logging in.')
+      }
+
+      login(userData, responseData.token)
 
       if (formData.role === 'therapist') {
         navigate('/verification-pending')
@@ -200,14 +205,13 @@ export default function Registration() {
             {[1, 2, 3].map((s) => (
               (formData.role === 'therapist' || s !== 2) && (
                 <div key={s} className="flex items-center">
-                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                     step >= s ? 'bg-[#e74c3c] text-white' : 'bg-gray-200 text-gray-500'
-                   }`}>
-                     {step > s ? <Check className="w-4 h-4" /> : (formData.role !== 'therapist' && s === 3 ? '2' : s)}
-                   </div>
-                   {s < (formData.role === 'therapist' ? 3 : 3) && (s !== 2 || formData.role === 'therapist') && (
-                     <div className={`w-8 h-1 mx-2 ${step > s ? 'bg-[#e74c3c]' : 'bg-gray-200'}`}></div>
-                   )}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= s ? 'bg-[#e74c3c] text-white' : 'bg-gray-200 text-gray-500'
+                    }`}>
+                    {step > s ? <Check className="w-4 h-4" /> : (formData.role !== 'therapist' && s === 3 ? '2' : s)}
+                  </div>
+                  {s < (formData.role === 'therapist' ? 3 : 3) && (s !== 2 || formData.role === 'therapist') && (
+                    <div className={`w-8 h-1 mx-2 ${step > s ? 'bg-[#e74c3c]' : 'bg-gray-200'}`}></div>
+                  )}
                 </div>
               )
             ))}
@@ -298,101 +302,101 @@ export default function Registration() {
 
             {step === 2 && formData.role === 'therapist' && (
               <>
-                 <div>
-                    <label htmlFor="profession" className="block text-sm font-medium text-gray-700 mb-2">Profession</label>
+                <div>
+                  <label htmlFor="profession" className="block text-sm font-medium text-gray-700 mb-2">Profession</label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="profession"
+                      value={formData.profession}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                      placeholder="e.g., Clinical Psychologist"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                      placeholder="City, Country"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fees ($/hr)</label>
                     <div className="relative">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
-                        type="text"
-                        name="profession"
-                        value={formData.profession}
+                        type="number"
+                        name="consultationFees"
+                        value={formData.consultationFees}
                         onChange={handleChange}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                        placeholder="e.g., Clinical Psychologist"
+                        placeholder="0.00"
                       />
                     </div>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Languages</label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="text"
-                        name="location"
-                        value={formData.location}
+                        name="languages"
+                        value={formData.languages}
                         onChange={handleChange}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                        placeholder="City, Country"
+                        placeholder="Eng, Esp"
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Fees ($/hr)</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="number"
-                          name="consultationFees"
-                          value={formData.consultationFees}
-                          onChange={handleChange}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Languages</label>
-                      <div className="relative">
-                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                          type="text"
-                          name="languages"
-                          value={formData.languages}
-                          onChange={handleChange}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                          placeholder="Eng, Esp"
-                        />
-                      </div>
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">License/Certificates</label>
+                  <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-[#e74c3c] transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                    />
+                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600">Click to upload files</p>
+                    {verificationDocs.length > 0 && (
+                      <p className="text-xs text-[#e74c3c] mt-2">{verificationDocs.length} file(s) selected</p>
+                    )}
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">License/Certificates</label>
-                    <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-[#e74c3c] transition-colors">
-                      <input
-                        type="file"
-                        multiple
-                        onChange={handleFileChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                      <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600">Click to upload files</p>
-                      {verificationDocs.length > 0 && (
-                        <p className="text-xs text-[#e74c3c] mt-2">{verificationDocs.length} file(s) selected</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      className="flex-1 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleNext}
-                      className="flex-1 py-3 px-4 bg-[#e74c3c] text-white rounded-xl hover:bg-[#c0392b]"
-                    >
-                      Next
-                    </button>
-                  </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="flex-1 py-3 px-4 bg-[#e74c3c] text-white rounded-xl hover:bg-[#c0392b]"
+                  >
+                    Next
+                  </button>
+                </div>
               </>
             )}
 
