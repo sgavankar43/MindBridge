@@ -419,16 +419,22 @@ export default function Community() {
                                             <div key={post._id} className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
                                                 <div className="flex items-start justify-between mb-4">
                                                     <div className="flex gap-3">
-                                                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold cursor-pointer" onClick={() => navigate(`/profile?id=${post.author._id}`)}>
-                                                            {post.author?.name?.[0]}
+                                                        <div
+                                                            className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold cursor-pointer"
+                                                            onClick={() => post.author?._id && navigate(`/profile?id=${post.author._id}`)}
+                                                        >
+                                                            {post.author?.name?.[0] || 'U'}
                                                         </div>
                                                         <div>
                                                             <div className="flex items-center gap-2 flex-wrap">
-                                                                <h3 className="font-semibold text-[#2d2d2d] hover:underline cursor-pointer" onClick={() => navigate(`/profile?id=${post.author._id}`)}>
-                                                                    {post.author?.name}
+                                                                <h3
+                                                                    className="font-semibold text-[#2d2d2d] hover:underline cursor-pointer"
+                                                                    onClick={() => post.author?._id && navigate(`/profile?id=${post.author._id}`)}
+                                                                >
+                                                                    {post.author?.name || 'User'}
                                                                 </h3>
                                                                 <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                                                    {post.author?.role}
+                                                                    {post.author?.role || 'user'}
                                                                 </span>
                                                             </div>
                                                             <p className="text-xs text-gray-400">{new Date(post.createdAt).toLocaleDateString()}</p>
@@ -449,16 +455,19 @@ export default function Community() {
                                                         onClick={() => handleLike(post._id)}
                                                         className="flex items-center gap-2 text-gray-500 hover:text-[#e74c3c] transition-colors group"
                                                     >
-                                                        <Heart className={`w-5 h-5 ${post.likes.includes(user?._id) ? 'fill-[#e74c3c] text-[#e74c3c]' : ''}`} />
-                                                        <span className="text-sm font-medium">{post.likes.length}</span>
+                                                        <Heart className={`w-5 h-5 ${(post.likes ?? []).includes(user?._id) ? 'fill-[#e74c3c] text-[#e74c3c]' : ''}`} />
+                                                        <span className="text-sm font-medium">{(post.likes ?? []).length}</span>
                                                     </button>
 
                                                     <button
-                                                        onClick={() => setActiveCommentId(activeCommentId === post._id ? null : post._id)}
+                                                        onClick={() => {
+                                                            setActiveCommentId(activeCommentId === post._id ? null : post._id)
+                                                            setCommentText("")
+                                                        }}
                                                         className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors"
                                                     >
                                                         <MessageCircle className="w-5 h-5" />
-                                                        <span className="text-sm font-medium">{post.comments.length}</span>
+                                                        <span className="text-sm font-medium">{(post.comments ?? []).length}</span>
                                                     </button>
                                                 </div>
 
@@ -466,18 +475,18 @@ export default function Community() {
                                                 {activeCommentId === post._id && (
                                                     <div className="mt-4 pt-4 border-t border-gray-100">
                                                         <div className="space-y-4 mb-4">
-                                                            {post.comments.map((comment) => (
+                                                            {(post.comments ?? []).map((comment) => (
                                                                 <div key={comment._id} className="flex gap-3">
                                                                     <div
                                                                         className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs cursor-pointer hover:opacity-80 transition-opacity"
-                                                                        onClick={() => navigate(`/profile?id=${comment.author?._id}`)}
+                                                                        onClick={() => comment.author?._id && navigate(`/profile?id=${comment.author._id}`)}
                                                                     >
                                                                         {comment.author?.name?.[0] || 'U'}
                                                                     </div>
                                                                     <div className="bg-gray-50 px-4 py-2 rounded-xl text-sm">
                                                                         <span
                                                                             className="font-semibold block cursor-pointer hover:underline hover:text-[#e74c3c]"
-                                                                            onClick={() => navigate(`/profile?id=${comment.author?._id}`)}
+                                                                            onClick={() => comment.author?._id && navigate(`/profile?id=${comment.author._id}`)}
                                                                         >
                                                                             {comment.author?.name || 'User'}
                                                                         </span>
