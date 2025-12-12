@@ -3,50 +3,19 @@ import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause, Heart, MessageCircle } from "lucide-react"
-import { apiRequest } from "../config/api"
+import { apiRequest, API_ENDPOINTS } from "../config/api"
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [updates, setUpdates] = useState([])
-
-  useEffect(() => {
-    const fetchUpdates = async () => {
-      try {
-        const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts`)
-        if (Array.isArray(data)) {
-          const formatted = data.slice(0, 5).map(post => ({
-            id: post._id,
-            author: post.author?.name || 'Anonymous User',
-            avatar: post.author?.name?.[0] || '?',
-            color: "bg-blue-500",
-            content: post.content || "",
-            likes: post.likes?.length || 0,
-            comments: post.comments?.length || 0,
-            time: new Date(post.createdAt).toLocaleDateString()
-          }))
-          setUpdates(formatted)
-        }
-      } catch (error) {
-        console.error("Failed to load community updates:", error)
-      }
-    }
-    fetchUpdates()
-  }, [])
-
-  // Task Manager State
-  const [tasks, setTasks] = useState([
-    { id: 1, text: "Morning meditation", completed: true },
-    { id: 2, text: "Journal my thoughts", completed: true },
-    { id: 3, text: "Take a 15-minute walk", completed: false },
-    { id: 4, text: "Practice gratitude", completed: false },
-    { id: 5, text: "Evening reflection", completed: false }
-  ])
-  const [newTask, setNewTask] = useState("")
+  const [tasks, setTasks] = useState([])
+  const [loading, setLoading] = useState(true)
 
   // Streak Manager State
-  const [currentStreak, setCurrentStreak] = useState(7)
-  const [longestStreak, setLongestStreak] = useState(15)
+  const [currentStreak, setCurrentStreak] = useState(0)
+  const [longestStreak, setLongestStreak] = useState(0)
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  // Mock week status for now as we don't store daily history yet
   const weekStatus = [true, true, true, true, true, true, true]
 
   // Mood Tracker State
@@ -68,6 +37,46 @@ export default function Dashboard() {
   ]
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
+  const [newTask, setNewTask] = useState("")
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [postsData, healthData] = await Promise.all([
+          apiRequest(API_ENDPOINTS.POSTS).catch(() => []),
+          apiRequest(API_ENDPOINTS.MENTAL_HEALTH).catch(() => null)
+        ])
+
+        // Process Posts
+        if (Array.isArray(postsData)) {
+          const formatted = postsData.slice(0, 5).map(post => ({
+            id: post._id,
+            author: post.author?.name || 'Anonymous User',
+            avatar: post.author?.name?.[0] || '?',
+            color: "bg-blue-500",
+            content: post.content || "",
+            likes: post.likes?.length || 0,
+            comments: post.comments?.length || 0,
+            time: new Date(post.createdAt).toLocaleDateString()
+          }))
+          setUpdates(formatted)
+        }
+
+        // Process Mental Health Profile
+        if (healthData) {
+          setTasks(healthData.goals?.map(g => ({ ...g, id: g._id, text: g.title })) || [])
+          setCurrentStreak(healthData.streakCount || 0)
+          setLongestStreak(healthData.longestStreak || 0)
+          if (healthData.currentMood) setSelectedMood(healthData.currentMood)
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   // Auto-scroll videos
   useEffect(() => {
@@ -81,21 +90,51 @@ export default function Dashboard() {
   }, [isPlaying, videos.length])
 
   // Task Manager Functions
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (newTask.trim()) {
-      setTasks([...tasks, { id: Date.now(), text: newTask, completed: false }])
-      setNewTask("")
+      try {
+        const newGoal = await apiRequest(API_ENDPOINTS.GOALS, {
+          method: 'POST',
+          body: JSON.stringify({ text: newTask })
+        })
+        setTasks([...tasks, { ...newGoal, id: newGoal._id, text: newGoal.title }])
+        setNewTask("")
+      } catch (error) {
+        console.error("Error adding task:", error)
+      }
     }
   }
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ))
+  const toggleTask = async (id) => {
+    try {
+      await apiRequest(`${API_ENDPOINTS.GOALS}/${id}`, { method: 'PUT' })
+      setTasks(tasks.map(task =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      ))
+    } catch (error) {
+      console.error("Error toggling task:", error)
+    }
   }
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id))
+  const deleteTask = async (id) => {
+    try {
+      await apiRequest(`${API_ENDPOINTS.GOALS}/${id}`, { method: 'DELETE' })
+      setTasks(tasks.filter(task => task.id !== id))
+    } catch (error) {
+      console.error("Error deleting task:", error)
+    }
+  }
+
+  const handleMoodSelect = async (moodId) => {
+    setSelectedMood(moodId)
+    try {
+      await apiRequest(API_ENDPOINTS.MOOD, {
+        method: 'PUT',
+        body: JSON.stringify({ mood: moodId })
+      })
+    } catch (error) {
+      console.error("Error updating mood:", error)
+    }
   }
 
   const completedTasks = tasks.filter(t => t.completed).length
@@ -324,7 +363,7 @@ export default function Dashboard() {
                   {moods.map((mood) => (
                     <button
                       key={mood.id}
-                      onClick={() => setSelectedMood(mood.id)}
+                      onClick={() => handleMoodSelect(mood.id)}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${selectedMood === mood.id
                         ? `${mood.color} text-white shadow-lg scale-105`
                         : 'bg-gray-50 hover:bg-gray-100'
