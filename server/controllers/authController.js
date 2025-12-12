@@ -4,24 +4,44 @@ const User = require('../models/User');
 const { upload } = require('../config/cloudinary');
 
 // Safe Structured Logger
+const SENSITIVE_KEYS = ['password', 'pass', 'confirmPassword', 'token', 'authorization', 'auth', 'apiKey', 'secret', 'body'];
+
+const sanitize = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(sanitize);
+
+    const output = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            if (SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+                output[key] = '[REDACTED]';
+            } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                output[key] = sanitize(obj[key]);
+            } else {
+                output[key] = obj[key];
+            }
+        }
+    }
+    return output;
+};
+
 const logger = {
     info: (message, meta = {}) => {
+        const safeMeta = sanitize(meta);
         if (process.env.NODE_ENV === 'production') {
-            const safeMeta = { ...meta };
-            // Redact sensitive fields
-            if (safeMeta.email) safeMeta.email = '[REDACTED]';
-            if (safeMeta.userId) safeMeta.userId = '[REDACTED]';
-            if (safeMeta.body) safeMeta.body = '[REDACTED]';
             console.info(JSON.stringify({ level: 'info', message, timestamp: new Date().toISOString(), ...safeMeta }));
         } else {
-            console.log(`[INFO] ${message}`, meta);
+            console.log(`[INFO] ${message}`, safeMeta);
         }
     },
     error: (message, error) => {
+        const safeMessage = typeof error === 'string' ? error : (error && (error.message || JSON.stringify(error)));
+        const safeStack = error && error.stack ? error.stack : undefined;
+
         if (process.env.NODE_ENV === 'production') {
-            console.error(JSON.stringify({ level: 'error', message, timestamp: new Date().toISOString(), error: error.message }));
+            console.error(JSON.stringify({ level: 'error', message, timestamp: new Date().toISOString(), error: safeMessage, stack: safeStack }));
         } else {
-            console.error(`[ERROR] ${message}`, error);
+            console.error(`[ERROR] ${message}`, { error: safeMessage, stack: safeStack });
         }
     }
 };
