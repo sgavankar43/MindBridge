@@ -15,22 +15,31 @@ exports.searchUsers = async (req, res) => {
             location,
             minFees,
             maxFees,
-            language
+            language,
+            page = 1,
+            limit = 50
         } = req.query;
+
+        const pageNum = Math.max(1, parseInt(page));
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+        const skip = (pageNum - 1) * limitNum;
 
         let filter = {};
 
         // Keyword search
-        if (query && typeof query === 'string' && query.trim()) {
-            if (query.length > 100) {
-                return res.status(400).json({ message: 'Search query too long' });
+        if (query && typeof query === 'string') {
+            const trimmedQuery = query.trim();
+            if (trimmedQuery) {
+                if (trimmedQuery.length > 100) {
+                    return res.status(400).json({ message: 'Search query too long' });
+                }
+                const escapedQuery = escapeRegex(trimmedQuery);
+                filter.$or = [
+                    { name: { $regex: escapedQuery, $options: 'i' } },
+                    { bio: { $regex: escapedQuery, $options: 'i' } },
+                    { profession: { $regex: escapedQuery, $options: 'i' } }
+                ];
             }
-            const escapedQuery = escapeRegex(query.trim());
-            filter.$or = [
-                { name: { $regex: escapedQuery, $options: 'i' } },
-                { bio: { $regex: escapedQuery, $options: 'i' } },
-                { profession: { $regex: escapedQuery, $options: 'i' } }
-            ];
         }
 
         // Filters: Handle role and visibility
@@ -41,11 +50,18 @@ exports.searchUsers = async (req, res) => {
             ]
         };
 
-        if (role === 'therapist') {
-            filter.role = 'therapist';
-            filter.verificationStatus = 'approved';
-        } else if (role) {
-            filter.role = role;
+        if (role) {
+            const ALLOWED_ROLES = ['user', 'therapist'];
+            if (!ALLOWED_ROLES.includes(role)) {
+                return res.status(400).json({ message: 'Invalid role parameter' });
+            }
+
+            if (role === 'therapist') {
+                filter.role = 'therapist';
+                filter.verificationStatus = 'approved';
+            } else {
+                filter.role = role;
+            }
         } else {
             // No specific role requested: apply visibility filter to hide unapproved therapists
             if (filter.$or) {
@@ -76,7 +92,11 @@ exports.searchUsers = async (req, res) => {
             if (maxFees) filter.consultationFees.$lte = Number(maxFees);
         }
 
-        const users = await User.find(filter).select('-password');
+        const users = await User.find(filter)
+            .select('-password')
+            .skip(skip)
+            .limit(limitNum)
+            .lean();
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Error searching users' });
@@ -141,19 +161,35 @@ exports.toggleFollow = async (req, res) => {
 
 exports.getSuggestedUsers = async (req, res) => {
     try {
-        console.log('Fetching suggestions for user:', req.user?._id);
-        // Ensure exclude ID is an ObjectId
+        if (!req.user || !mongoose.Types.ObjectId.isValid(req.user._id)) {
+            return res.status(400).json({ message: 'Invalid user session' });
+        }
+
         const excludeId = new mongoose.Types.ObjectId(req.user._id);
 
-        // Simple suggestion logic: Get 3 random users who are not the current user
-        // In a real app, this would use aggregation with $sample and exclude already followed users
         const suggestions = await User.aggregate([
-            { $match: { _id: { $ne: excludeId } } }, // Exclude current user
-            { $sample: { size: 3 } }, // Random 3
-            { $project: { password: 0, verificationDocuments: 0 } } // Exclude sensitive fields
+            {
+                $match: {
+                    _id: { $ne: excludeId },
+                    $or: [
+                        { role: { $ne: 'therapist' } },
+                        { role: 'therapist', verificationStatus: 'approved' }
+                    ]
+                }
+            },
+            { $sample: { size: 3 } },
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    avatar: 1,
+                    bio: 1,
+                    role: 1,
+                    profession: 1
+                }
+            }
         ]);
 
-        console.log('Suggestions found:', suggestions.length);
         res.json(suggestions);
     } catch (error) {
         console.error('Error fetching suggestions:', error);
@@ -175,12 +211,20 @@ exports.getMentalHealthProfile = async (req, res) => {
 exports.updateMood = async (req, res) => {
     try {
         const { mood } = req.body;
+
+        if (!mood || typeof mood !== 'string' || !mood.trim() || mood.length > 100) {
+            return res.status(400).json({ message: 'Invalid mood' });
+        }
+
         const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         if (!user.mentalHealthProfile) {
             user.mentalHealthProfile = {};
         }
-        user.mentalHealthProfile.currentMood = mood;
+        user.mentalHealthProfile.currentMood = mood.trim();
 
         await user.save();
         res.json(user.mentalHealthProfile);
@@ -192,16 +236,27 @@ exports.updateMood = async (req, res) => {
 exports.addGoal = async (req, res) => {
     try {
         const { text } = req.body;
-        if (!text) return res.status(400).json({ message: 'Goal text is required' });
+
+        if (!text || typeof text !== 'string' || !text.trim()) {
+            return res.status(400).json({ message: 'Goal text is required' });
+        }
+
+        const trimmedText = text.trim();
+        if (trimmedText.length > 200) {
+            return res.status(400).json({ message: 'Goal text cannot exceed 200 characters' });
+        }
 
         const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (!user.mentalHealthProfile) {
             user.mentalHealthProfile = { goals: [] };
+        } else if (!Array.isArray(user.mentalHealthProfile.goals)) {
+            user.mentalHealthProfile.goals = [];
         }
 
         const newGoal = {
-            title: text,
+            title: trimmedText,
             description: '',
             completed: false,
             createdAt: new Date()
@@ -220,7 +275,17 @@ exports.addGoal = async (req, res) => {
 exports.toggleGoal = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid goal ID' });
+        }
+
         const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (!user.mentalHealthProfile || !Array.isArray(user.mentalHealthProfile.goals)) {
+            return res.status(404).json({ message: 'Goal not found' });
+        }
 
         const goal = user.mentalHealthProfile.goals.id(id);
         if (!goal) return res.status(404).json({ message: 'Goal not found' });
@@ -237,7 +302,22 @@ exports.toggleGoal = async (req, res) => {
 exports.deleteGoal = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid goal ID' });
+        }
+
         const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (!user.mentalHealthProfile || !Array.isArray(user.mentalHealthProfile.goals)) {
+            return res.status(404).json({ message: 'Goal not found' });
+        }
+
+        const goal = user.mentalHealthProfile.goals.id(id);
+        if (!goal) {
+            return res.status(404).json({ message: 'Goal not found' });
+        }
 
         user.mentalHealthProfile.goals.pull(id);
         await user.save();
@@ -250,16 +330,32 @@ exports.deleteGoal = async (req, res) => {
 
 exports.updateStreak = async (req, res) => {
     try {
-        // This accepts a direct streak update. 
-        // Ideally, this should be calculated server-side based on activity, but for now we follow the user request.
-        const { streak } = req.body;
+        const streakInput = req.body.streak;
+        const streak = parseInt(streakInput, 10);
+
+        if (isNaN(streak) || !Number.isInteger(streak) || streak < 0) {
+            return res.status(400).json({ message: 'Streak must be a non-negative integer' });
+        }
 
         const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.mentalHealthProfile) {
+            user.mentalHealthProfile = { goals: [], longestStreak: 0 };
+        }
+
+        // Initialize longestStreak if it doesn't exist on the profile
+        if (typeof user.mentalHealthProfile.longestStreak !== 'number') {
+            user.mentalHealthProfile.longestStreak = 0;
+        }
 
         if (streak > user.mentalHealthProfile.longestStreak) {
             user.mentalHealthProfile.longestStreak = streak;
         }
         user.mentalHealthProfile.streakCount = streak;
+        user.mentalHealthProfile.lastUncheckDate = new Date(); // Track when it was last updated if needed
 
         await user.save();
         res.json({
