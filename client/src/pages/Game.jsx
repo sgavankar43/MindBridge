@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/sidebar";
-import { Header } from "@/components/header";
+import { Header } from "@/components/Header";
 import { Clock, Brain, Users, Sparkles, Grid3x3, Palette } from "lucide-react";
 
 export default function Game() {

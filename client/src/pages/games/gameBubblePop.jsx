@@ -1,6 +1,6 @@
 import React from "react";
 import { Sidebar } from "@/components/sidebar";
-import { Header } from "@/components/header";
+import { Header } from "@/components/Header";
 import BubblePop from "@/components/BubblePop";
 
 export default function GameBubblePop() {
