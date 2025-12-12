@@ -44,11 +44,19 @@ exports.getPosts = async (req, res) => {
 
         const posts = await Post.find(query)
             .populate('author', 'name avatar role profession')
+            .populate({
+                path: 'comments',
+                populate: {
+                    path: 'author',
+                    select: 'name avatar'
+                }
+            })
             .sort({ createdAt: -1 })
             .limit(50); // Pagination can be added later
 
         res.json(posts);
     } catch (error) {
+        console.error('Error fetching posts:', error);
         res.status(500).json({ message: 'Failed to fetch posts' });
     }
 };
@@ -60,7 +68,7 @@ exports.toggleLike = async (req, res) => {
             return res.status(404).json({ message: 'Post not found' });
         }
 
-        const index = post.likes.indexOf(req.user._id);
+        const index = post.likes.findIndex(id => id.toString() === req.user._id.toString());
         if (index === -1) {
             post.likes.push(req.user._id);
         } else {

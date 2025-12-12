@@ -13,7 +13,23 @@ export default function Community() {
     const [users, setUsers] = useState([])
     const [newPost, setNewPost] = useState("")
     const [image, setImage] = useState(null)
+    const [previewUrl, setPreviewUrl] = useState(null)
     const [searchQuery, setSearchQuery] = useState("")
+    const [activeCommentId, setActiveCommentId] = useState(null)
+    const [commentText, setCommentText] = useState("")
+
+    useEffect(() => {
+        if (!image) {
+            setPreviewUrl(null)
+            return
+        }
+
+        const objectUrl = URL.createObjectURL(image)
+        setPreviewUrl(objectUrl)
+
+        // Cleanup on unmount or when image changes
+        return () => URL.revokeObjectURL(objectUrl)
+    }, [image])
     const [showFilters, setShowFilters] = useState(false)
     const [filters, setFilters] = useState({
         role: "",
@@ -24,13 +40,22 @@ export default function Community() {
     const [activeTab, setActiveTab] = useState("posts") // "posts" or "users"
     const [loading, setLoading] = useState(false)
     const [dmContacts, setDmContacts] = useState([])
-    const [activeCommentId, setActiveCommentId] = useState(null)
-    const [commentText, setCommentText] = useState("")
+    const [suggestedUsers, setSuggestedUsers] = useState([])
 
     useEffect(() => {
-        fetchPosts()
         fetchConversations()
+        fetchSuggestions()
     }, [])
+
+    const fetchSuggestions = async () => {
+        try {
+            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/suggestions`)
+            setSuggestedUsers(Array.isArray(data) ? data : [])
+        } catch (error) {
+            console.error("Error fetching suggestions:", error)
+            setSuggestedUsers([])
+        }
+    }
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -53,9 +78,10 @@ export default function Community() {
         setLoading(true)
         try {
             const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts`)
-            setPosts(data)
+            setPosts(Array.isArray(data) ? data : [])
         } catch (error) {
             console.error("Error fetching posts:", error)
+            setPosts([])
         } finally {
             setLoading(false)
         }
@@ -65,19 +91,24 @@ export default function Community() {
         try {
             const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/conversations`)
             // Backend returns: { id, name, email, role, lastMessage, timestamp, unread }
-            const formatted = data.map(c => ({
-                id: c.id,
-                name: c.name,
-                avatar: c.name ? c.name.substring(0, 2).toUpperCase() : "??",
-                lastMessage: c.lastMessage,
-                time: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                unread: c.unread,
-                online: false, // We don't have online status yet without socket here
-                color: "bg-blue-500"
-            })).slice(0, 5) // Show top 5
-            setDmContacts(formatted)
+            if (Array.isArray(data)) {
+                const formatted = data.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    avatar: c.name ? c.name.substring(0, 2).toUpperCase() : "??",
+                    lastMessage: c.lastMessage,
+                    time: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    unread: c.unread,
+                    online: false, // We don't have online status yet without socket here
+                    color: "bg-blue-500"
+                })).slice(0, 5) // Show top 5
+                setDmContacts(formatted)
+            } else {
+                setDmContacts([])
+            }
         } catch (error) {
             console.error("Error fetching conversations:", error)
+            setDmContacts([])
         }
     }
 
@@ -87,7 +118,7 @@ export default function Community() {
             if (activeTab === "posts") {
                 const queryParams = new URLSearchParams({ search: searchQuery })
                 const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts?${queryParams}`)
-                setPosts(data)
+                setPosts(Array.isArray(data) ? data : [])
             } else {
                 const queryParams = new URLSearchParams({
                     query: searchQuery,
@@ -97,7 +128,7 @@ export default function Community() {
                     maxFees: filters.maxFees
                 })
                 const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/search?${queryParams}`)
-                setUsers(data)
+                setUsers(Array.isArray(data) ? data : [])
             }
         } catch (error) {
             console.error("Error searching:", error)
@@ -184,6 +215,18 @@ export default function Community() {
             }
         } catch (error) {
             console.error("Error commenting on post:", error)
+        }
+    }
+
+    const handleFollow = async (userId) => {
+        try {
+            await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/${userId}/follow`, {
+                method: 'PUT'
+            })
+            // Optionally remove from suggested list or show "Followed"
+            setSuggestedUsers(suggestedUsers.filter(u => u._id !== userId))
+        } catch (error) {
+            console.error("Error following user:", error)
         }
     }
 
@@ -328,9 +371,9 @@ export default function Community() {
                                             className="w-full px-4 py-3 bg-gray-50 rounded-xl text-sm sm:text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#e74c3c] min-h-[100px]"
                                         />
 
-                                        {image && (
+                                        {image && previewUrl && (
                                             <div className="mt-2 relative inline-block">
-                                                <img src={URL.createObjectURL(image)} alt="Preview" className="h-20 w-20 object-cover rounded-lg" />
+                                                <img src={previewUrl} alt="Preview" className="h-20 w-20 object-cover rounded-lg" />
                                                 <button onClick={() => setImage(null)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 w-4 h-4 flex items-center justify-center text-xs">x</button>
                                             </div>
                                         )}
@@ -367,96 +410,109 @@ export default function Community() {
                                 <div className="text-center py-10 text-gray-500">Loading...</div>
                             ) : activeTab === 'posts' ? (
                                 <div className="space-y-4">
-                                    {posts.map((post) => (
-                                        <div key={post._id} className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex gap-3">
-                                                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold cursor-pointer" onClick={() => navigate(`/profile?id=${post.author._id}`)}>
-                                                        {post.author?.name?.[0]}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <h3 className="font-semibold text-[#2d2d2d] hover:underline cursor-pointer" onClick={() => navigate(`/profile?id=${post.author._id}`)}>
-                                                                {post.author?.name}
-                                                            </h3>
-                                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                                                {post.author?.role}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-xs text-gray-400">{new Date(post.createdAt).toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <p className="text-sm sm:text-base text-[#2d2d2d] mb-4 whitespace-pre-wrap leading-relaxed">
-                                                {post.content}
-                                            </p>
-
-                                            {post.image && (
-                                                <img src={post.image} alt="Post content" className="w-full rounded-xl mb-4 max-h-96 object-cover" />
-                                            )}
-
-                                            <div className="flex items-center gap-6 pt-4 border-t border-gray-100">
-                                                <button
-                                                    onClick={() => handleLike(post._id)}
-                                                    className="flex items-center gap-2 text-gray-500 hover:text-[#e74c3c] transition-colors group"
-                                                >
-                                                    <Heart className={`w-5 h-5 ${post.likes.includes(user?._id) ? 'fill-[#e74c3c] text-[#e74c3c]' : ''}`} />
-                                                    <span className="text-sm font-medium">{post.likes.length}</span>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => setActiveCommentId(activeCommentId === post._id ? null : post._id)}
-                                                    className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors"
-                                                >
-                                                    <MessageCircle className="w-5 h-5" />
-                                                    <span className="text-sm font-medium">{post.comments.length}</span>
-                                                </button>
-                                            </div>
-
-                                            {/* Comment Section */}
-                                            {activeCommentId === post._id && (
-                                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                                    <div className="space-y-4 mb-4">
-                                                        {post.comments.map((comment) => (
-                                                            <div key={comment._id} className="flex gap-3">
-                                                                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs">
-                                                                    {comment.author?.name?.[0] || 'U'}
-                                                                </div>
-                                                                <div className="bg-gray-50 px-4 py-2 rounded-xl text-sm">
-                                                                    <span className="font-semibold block">{comment.author?.name || 'User'}</span>
-                                                                    <p>{comment.content}</p>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    <div className="flex gap-3">
-                                                        <div className="w-8 h-8 bg-[#e74c3c] rounded-full flex items-center justify-center flex-shrink-0">
-                                                            <span className="text-white font-bold text-xs">{user?.name?.[0] || 'U'}</span>
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <input
-                                                                type="text"
-                                                                value={commentText}
-                                                                onChange={(e) => setCommentText(e.target.value)}
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleComment(post._id)}
-                                                                placeholder="Write a comment..."
-                                                                className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
-                                                            />
-                                                            <button
-                                                                onClick={() => handleComment(post._id)}
-                                                                disabled={!commentText.trim()}
-                                                                className="mt-2 px-4 py-1.5 bg-[#e74c3c] text-white rounded-lg text-sm font-medium hover:bg-[#c0392b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                            >
-                                                                <Send className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                                    {posts.length === 0 ? (
+                                        <div className="text-center py-10 text-gray-500 bg-white rounded-2xl shadow-sm">
+                                            <p>No posts found.</p>
                                         </div>
-                                    ))}
-                                </div>
+                                    ) : (
+                                        posts.map((post) => (
+                                            <div key={post._id} className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="flex gap-3">
+                                                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold cursor-pointer" onClick={() => navigate(`/profile?id=${post.author._id}`)}>
+                                                            {post.author?.name?.[0]}
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h3 className="font-semibold text-[#2d2d2d] hover:underline cursor-pointer" onClick={() => navigate(`/profile?id=${post.author._id}`)}>
+                                                                    {post.author?.name}
+                                                                </h3>
+                                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                                                    {post.author?.role}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-400">{new Date(post.createdAt).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-sm sm:text-base text-[#2d2d2d] mb-4 whitespace-pre-wrap leading-relaxed">
+                                                    {post.content}
+                                                </p>
+
+                                                {post.image && (
+                                                    <img src={post.image} alt="Post content" className="w-full rounded-xl mb-4 max-h-96 object-cover" />
+                                                )}
+
+                                                <div className="flex items-center gap-6 pt-4 border-t border-gray-100">
+                                                    <button
+                                                        onClick={() => handleLike(post._id)}
+                                                        className="flex items-center gap-2 text-gray-500 hover:text-[#e74c3c] transition-colors group"
+                                                    >
+                                                        <Heart className={`w-5 h-5 ${post.likes.includes(user?._id) ? 'fill-[#e74c3c] text-[#e74c3c]' : ''}`} />
+                                                        <span className="text-sm font-medium">{post.likes.length}</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setActiveCommentId(activeCommentId === post._id ? null : post._id)}
+                                                        className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors"
+                                                    >
+                                                        <MessageCircle className="w-5 h-5" />
+                                                        <span className="text-sm font-medium">{post.comments.length}</span>
+                                                    </button>
+                                                </div>
+
+                                                {/* Comment Section */}
+                                                {activeCommentId === post._id && (
+                                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                                        <div className="space-y-4 mb-4">
+                                                            {post.comments.map((comment) => (
+                                                                <div key={comment._id} className="flex gap-3">
+                                                                    <div
+                                                                        className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                                                                        onClick={() => navigate(`/profile?id=${comment.author?._id}`)}
+                                                                    >
+                                                                        {comment.author?.name?.[0] || 'U'}
+                                                                    </div>
+                                                                    <div className="bg-gray-50 px-4 py-2 rounded-xl text-sm">
+                                                                        <span
+                                                                            className="font-semibold block cursor-pointer hover:underline hover:text-[#e74c3c]"
+                                                                            onClick={() => navigate(`/profile?id=${comment.author?._id}`)}
+                                                                        >
+                                                                            {comment.author?.name || 'User'}
+                                                                        </span>
+                                                                        <p>{comment.content}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex gap-3">
+                                                            <div className="w-8 h-8 bg-[#e74c3c] rounded-full flex items-center justify-center flex-shrink-0">
+                                                                <span className="text-white font-bold text-xs">{user?.name?.[0] || 'U'}</span>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <input
+                                                                    type="text"
+                                                                    value={commentText}
+                                                                    onChange={(e) => setCommentText(e.target.value)}
+                                                                    onKeyDown={(e) => e.key === 'Enter' && handleComment(post._id)}
+                                                                    placeholder="Write a comment..."
+                                                                    className="w-full px-4 py-2 bg-gray-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#e74c3c]"
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleComment(post._id)}
+                                                                    disabled={!commentText.trim()}
+                                                                    className="mt-2 px-4 py-1.5 bg-[#e74c3c] text-white rounded-lg text-sm font-medium hover:bg-[#c0392b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                                >
+                                                                    <Send className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}                    </div>
                             ) : (
                                 <div className="space-y-4">
                                     {users.map((u) => (
@@ -554,38 +610,37 @@ export default function Community() {
                                 {/* Suggested Connections */}
                                 <div className="bg-white rounded-2xl p-6 shadow-sm mt-6">
                                     <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">Suggested Connections</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                                                <span className="text-white font-bold text-sm">JD</span>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-semibold text-[#2d2d2d] text-sm">Dr. John Davis</h4>
-                                                <p className="text-xs text-gray-500">Psychiatrist</p>
-                                            </div>
-                                            <button className="px-3 py-1 bg-[#e74c3c] text-white rounded-lg text-xs font-medium hover:bg-[#c0392b] transition-colors">
-                                                Follow
-                                            </button>
+                                    {suggestedUsers.length === 0 ? (
+                                        <p className="text-sm text-gray-500">No suggestions available.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {suggestedUsers.map(u => (
+                                                <div key={u._id} className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center cursor-pointer" onClick={() => navigate(`/profile?id=${u._id}`)}>
+                                                        <span className="text-white font-bold text-sm">{u.name?.[0]}</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-semibold text-[#2d2d2d] text-sm cursor-pointer hover:underline" onClick={() => navigate(`/profile?id=${u._id}`)}>
+                                                            {u.name}
+                                                        </h4>
+                                                        <p className="text-xs text-gray-500">{u.profession || u.role}</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleFollow(u._id)}
+                                                        className="px-3 py-1 bg-[#e74c3c] text-white rounded-lg text-xs font-medium hover:bg-[#c0392b] transition-colors"
+                                                    >
+                                                        Follow
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center">
-                                                <span className="text-white font-bold text-sm">LM</span>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-semibold text-[#2d2d2d] text-sm">Lisa Martinez</h4>
-                                                <p className="text-xs text-gray-500">Life Coach</p>
-                                            </div>
-                                            <button className="px-3 py-1 bg-[#e74c3c] text-white rounded-lg text-xs font-medium hover:bg-[#c0392b] transition-colors">
-                                                Follow
-                                            </button>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
