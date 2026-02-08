@@ -119,7 +119,7 @@ export default function Game2048({ size = GRID_SIZE, onGameOver }) {
       let moved = false;
       let gained = 0;
       const n = g.length;
-      const newG = makeEmptyGrid(n);
+      let newG = makeEmptyGrid(n);
       for (let r = 0; r < n; r++) {
         const { newRow, gainedScore, moved: rowMoved } = slideAndMergeRow(g[r]);
         gained += gainedScore;
@@ -295,7 +295,7 @@ export default function Game2048({ size = GRID_SIZE, onGameOver }) {
               ←
             </button>
             <button
-              onClick={() => {}}
+              onClick={() => { }}
               className="p-2 bg-transparent"
               aria-hidden
             />
