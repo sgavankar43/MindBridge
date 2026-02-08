@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Send, Plus, MessageSquare, Trash2, MoreVertical } from "lucide-react"
-import { apiRequest } from "../config/api"
+import API_BASE_URL, { apiRequest } from "../config/api"
 
 export default function Messages() {
   const [sessions, setSessions] = useState([])
@@ -25,7 +25,7 @@ export default function Messages() {
   const fetchSessions = async () => {
     setLoadingSessions(true)
     try {
-      const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions`)
+      const data = await apiRequest(`${API_BASE_URL}/api/ai/sessions`)
       setSessions(data)
       if (data.length > 0) {
         setActiveSessionId(data[0]._id)
@@ -72,8 +72,9 @@ export default function Messages() {
       setIsTyping(true);
 
       try {
-        const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/message`, {
+        const response = await apiRequest(`${API_BASE_URL}/api/ai/message`, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId: activeSessionId,
             message: userMessage
@@ -106,7 +107,7 @@ export default function Messages() {
             messages: [newMessage, aiMessage],
             updatedAt: new Date().toISOString()
           };
-          setSessions([newSession, ...sessions]);
+          setSessions(prev => [newSession, ...prev]);
           setActiveSessionId(response.sessionId);
         }
 
@@ -156,8 +157,9 @@ export default function Messages() {
       setIsTyping(true);
 
       try {
-        const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/message`, {
+        const response = await apiRequest(`${API_BASE_URL}/api/ai/message`, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: userMessage
           })
@@ -172,7 +174,7 @@ export default function Messages() {
           ],
           updatedAt: new Date().toISOString()
         };
-        setSessions([newSession, ...sessions]);
+        setSessions(prev => [newSession, ...prev]);
         setActiveSessionId(response.sessionId);
       } catch (error) {
         console.error("Error creating new session with message:", error);
@@ -183,10 +185,10 @@ export default function Messages() {
     }
 
     try {
-      const response = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions`, {
+      const response = await apiRequest(`${API_BASE_URL}/api/ai/sessions`, {
         method: 'POST'
       });
-      setSessions([response, ...sessions]);
+      setSessions(prev => [response, ...prev]);
       setActiveSessionId(response._id);
     } catch (error) {
       console.error("Error creating session:", error);
@@ -195,7 +197,7 @@ export default function Messages() {
 
   const handleDeleteSession = async (sessionId) => {
     try {
-      await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/ai/sessions/${sessionId}`, {
+      await apiRequest(`${API_BASE_URL}/api/ai/sessions/${sessionId}`, {
         method: 'DELETE'
       });
       const newSessions = sessions.filter(s => s._id !== sessionId);

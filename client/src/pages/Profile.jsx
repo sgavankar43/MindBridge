@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { useUser } from "../context/UserContext"
-import { apiRequest } from "../config/api"
+import API_BASE_URL, { apiRequest } from "../config/api"
 import {
   Mail, Phone, Linkedin, Github, Globe,
   Camera, Edit2, MapPin, Briefcase,
@@ -32,7 +32,7 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/${profileId}/profile`)
+      const data = await apiRequest(`${API_BASE_URL}/api/users/${profileId}/profile`)
       setProfileData(data.user)
       setPosts(data.posts)
       setComments(data.comments)
@@ -49,7 +49,7 @@ export default function Profile() {
 
   const handleFollow = async () => {
     try {
-      const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/${profileId}/follow`, {
+      const data = await apiRequest(`${API_BASE_URL}/api/users/${profileId}/follow`, {
         method: 'PUT'
       })
       setIsFollowing(data.isFollowing)
@@ -124,11 +124,10 @@ export default function Profile() {
                   <div className="flex gap-2">
                     <button
                       onClick={handleFollow}
-                      className={`px-6 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 ${
-                        isFollowing
+                      className={`px-6 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 ${isFollowing
                         ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                         : 'bg-[#e74c3c] text-white hover:bg-[#c0392b]'
-                      }`}
+                        }`}
                     >
                       {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
                       {isFollowing ? 'Unfollow' : 'Follow'}
@@ -169,25 +168,22 @@ export default function Profile() {
                 <div className="flex border-b border-gray-100">
                   <button
                     onClick={() => setActiveTab('posts')}
-                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'posts' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'posts' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     Posts
                   </button>
                   <button
                     onClick={() => setActiveTab('comments')}
-                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'comments' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'comments' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     Comments
                   </button>
                   <button
                     onClick={() => setActiveTab('about')}
-                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'about' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'about' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     About
                   </button>
@@ -203,7 +199,7 @@ export default function Profile() {
                           <div key={post._id} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
                             <p className="text-gray-800 mb-2">{post.content}</p>
                             {post.image && (
-                                <img src={post.image} alt="Post" className="rounded-xl mt-2 max-h-60 object-cover" />
+                              <img src={post.image} alt="Post" className="rounded-xl mt-2 max-h-60 object-cover" />
                             )}
                             <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
@@ -234,33 +230,33 @@ export default function Profile() {
                   )}
 
                   {activeTab === 'about' && (
-                     <div className="space-y-4">
-                        <div>
-                            <h3 className="font-semibold mb-2">Details</h3>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span className="text-gray-500 block">Role</span>
-                                    <span className="capitalize">{profileData.role}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500 block">Joined</span>
-                                    <span>{new Date(profileData.createdAt).toLocaleDateString()}</span>
-                                </div>
-                                {profileData.languages && profileData.languages.length > 0 && (
-                                    <div>
-                                        <span className="text-gray-500 block">Languages</span>
-                                        <span>{profileData.languages.join(', ')}</span>
-                                    </div>
-                                )}
-                                {profileData.consultationFees && (
-                                    <div>
-                                        <span className="text-gray-500 block">Fees</span>
-                                        <span>${profileData.consultationFees}/hr</span>
-                                    </div>
-                                )}
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-semibold mb-2">Details</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500 block">Role</span>
+                            <span className="capitalize">{profileData.role}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block">Joined</span>
+                            <span>{new Date(profileData.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          {profileData.languages && profileData.languages.length > 0 && (
+                            <div>
+                              <span className="text-gray-500 block">Languages</span>
+                              <span>{profileData.languages.join(', ')}</span>
                             </div>
+                          )}
+                          {profileData.consultationFees && (
+                            <div>
+                              <span className="text-gray-500 block">Fees</span>
+                              <span>${profileData.consultationFees}/hr</span>
+                            </div>
+                          )}
                         </div>
-                     </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -268,34 +264,34 @@ export default function Profile() {
 
             {/* Right Side - Info */}
             <div className="lg:col-span-1 space-y-6">
-               {/* Verification Badge */}
-               {profileData.role === 'therapist' && (
-                 <div className="bg-white rounded-2xl p-6 shadow-sm">
-                    <h3 className="font-semibold mb-4">Verification Status</h3>
-                    {profileData.verificationStatus === 'approved' ? (
-                        <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl">
-                            <CheckCircle className="w-5 h-5" />
-                            <span className="font-medium">Verified Therapist</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 p-3 rounded-xl">
-                            <Shield className="w-5 h-5" />
-                            <span className="font-medium capitalize">{profileData.verificationStatus || 'Pending'}</span>
-                        </div>
-                    )}
-                 </div>
-               )}
-
-               {/* Contact Info */}
-               <div className="bg-white rounded-2xl p-6 shadow-sm">
-                 <h3 className="font-semibold mb-4">Contact</h3>
-                 <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-sm">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span>{profileData.email}</span>
+              {/* Verification Badge */}
+              {profileData.role === 'therapist' && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h3 className="font-semibold mb-4">Verification Status</h3>
+                  {profileData.verificationStatus === 'approved' ? (
+                    <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-medium">Verified Therapist</span>
                     </div>
-                 </div>
-               </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-yellow-600 bg-yellow-50 p-3 rounded-xl">
+                      <Shield className="w-5 h-5" />
+                      <span className="font-medium capitalize">{profileData.verificationStatus || 'Pending'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Contact Info */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="font-semibold mb-4">Contact</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span>{profileData.email}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
