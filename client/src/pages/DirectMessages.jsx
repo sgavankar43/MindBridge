@@ -188,6 +188,7 @@ export default function DirectMessages() {
             try {
                 await apiRequest(`${API_BASE_URL}/api/messages`, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         recipientId: selectedUser.id || selectedUser._id,
                         text: text

@@ -21,6 +21,7 @@ export default function AdminDashboard() {
     }, [user, navigate])
 
     const fetchPendingTherapists = async () => {
+        setLoading(true)
         try {
             const data = await apiRequest(`${API_BASE_URL}/api/admin/pending-therapists`)
             setTherapists(data)
