@@ -11,7 +11,7 @@ import { chatAPI, communityAPI } from "@/services/api"
 import { getAuthToken, setAuthToken } from "@/services/api"
 import { getAuth } from "firebase/auth"
 
-const SOCKET_URL = "http://localhost:3001"
+const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:5002"
 
 export function ChatPage({ className }) {
   const [selectedUserId, setSelectedUserId] = React.useState(null)
@@ -39,12 +39,12 @@ export function ChatPage({ className }) {
             const fresh = await auth.currentUser.getIdToken(true)
             if (fresh) setAuthToken(fresh)
           }
-        } catch {}
+        } catch { }
         const [conversations, communitiesData] = await Promise.all([
           chatAPI.getConversations(),
           communityAPI.getCommunities().catch(() => []),
         ])
-        
+
         // Transform conversations to user list format
         const usersList = conversations.map(conv => ({
           id: conv.otherUserId,
@@ -57,7 +57,7 @@ export function ChatPage({ className }) {
           role: conv.otherUser?.role || '',
           isCommunity: false,
         }))
-        
+
         // Transform communities to user list format
         const communitiesList = communitiesData.map(comm => ({
           id: comm.id,
@@ -71,7 +71,7 @@ export function ChatPage({ className }) {
           isCommunity: true,
           members: comm.members || [],
         }))
-        
+
         setUsers(usersList)
         setCommunities(communitiesList)
 
@@ -82,7 +82,7 @@ export function ChatPage({ className }) {
           // If target user not in conversations, fetch their info
           if (!usersList.find(u => u.id === targetUid)) {
             try {
-              const res = await fetch('http://localhost:3001/api/auth/get-user', {
+              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/auth/get-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uid: targetUid })
@@ -93,11 +93,11 @@ export function ChatPage({ className }) {
                 if (data?.success && data?.user) {
                   const name = data.user.name || (data.user.email ? data.user.email.split('@')[0] : 'User')
                   const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-                  setUsers(prev => [{ 
-                    id: targetUid, 
-                    name, 
-                    avatar, 
-                    status: 'online', 
+                  setUsers(prev => [{
+                    id: targetUid,
+                    name,
+                    avatar,
+                    status: 'online',
                     unreadCount: 0,
                     role: data.user.role || ''
                   }, ...prev])
@@ -105,11 +105,11 @@ export function ChatPage({ className }) {
                   // User not found, use fallback
                   const name = 'User'
                   const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(targetUid)}`
-                  setUsers(prev => [{ 
-                    id: targetUid, 
-                    name, 
-                    avatar, 
-                    status: 'online', 
+                  setUsers(prev => [{
+                    id: targetUid,
+                    name,
+                    avatar,
+                    status: 'online',
                     unreadCount: 0,
                     role: ''
                   }, ...prev])
@@ -186,9 +186,9 @@ export function ChatPage({ className }) {
           })
         })
       }
-      
+
       // Update user's last message in sidebar
-      setUsers(prev => prev.map(u => 
+      setUsers(prev => prev.map(u =>
         (u.id === message.senderId || u.id === message.receiverId) ? {
           ...u,
           lastMessage: message.content,
@@ -231,7 +231,7 @@ export function ChatPage({ className }) {
     newSocket.on('community-invite', async (data) => {
       console.log('[ChatPage] Received community-invite notification:', data);
       const { requestId, senderId, senderInfo } = data
-      
+
       // Show notification toast with accept/reject actions
       toast({
         title: "Community Invitation",
@@ -308,38 +308,38 @@ export function ChatPage({ className }) {
     const onRefreshed = async (e) => {
       const newToken = e?.detail?.token
       if (!newToken) return
-      
+
       console.log('[ChatPage] Token refreshed, reconnecting Socket.IO...')
-      
+
       // Disconnect old socket
       if (socket) {
-        try { 
+        try {
           socket.removeAllListeners()
-          socket.disconnect() 
+          socket.disconnect()
         } catch (err) {
           console.warn('[ChatPage] Error disconnecting old socket:', err)
         }
       }
-      
+
       // Create new socket with fresh token
-      const newSocket = io(SOCKET_URL, { 
+      const newSocket = io(SOCKET_URL, {
         auth: { token: newToken },
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5,
       })
-      
+
       // Re-setup all event listeners
       newSocket.on('connect', () => {
         console.log('[ChatPage] Socket reconnected after token refresh')
         setConnectionStatus("connected")
       })
-      
+
       newSocket.on('disconnect', () => {
         console.log('[ChatPage] Socket disconnected')
         setConnectionStatus("disconnected")
       })
-      
+
       newSocket.on('message', (message) => {
         if (message.senderId !== currentUserId && (message.senderId === selectedUserId || message.receiverId === currentUserId)) {
           setMessages(prev => {
@@ -354,8 +354,8 @@ export function ChatPage({ className }) {
             })
           })
         }
-        
-        setUsers(prev => prev.map(u => 
+
+        setUsers(prev => prev.map(u =>
           (u.id === message.senderId || u.id === message.receiverId) ? {
             ...u,
             lastMessage: message.content,
@@ -363,7 +363,7 @@ export function ChatPage({ className }) {
           } : u
         ))
       })
-      
+
       newSocket.on('message-sent', (message) => {
         setMessages(prev => {
           if (prev.find(m => m.id === message.id)) return prev
@@ -377,13 +377,13 @@ export function ChatPage({ className }) {
           })
         })
       })
-      
+
       newSocket.on('typing', (data) => {
         if (data.userId === selectedUserId) {
           setIsTyping(data.isTyping)
         }
       })
-      
+
       newSocket.on('error', (error) => {
         console.error('[ChatPage] Socket error:', error)
         toast({
@@ -392,12 +392,12 @@ export function ChatPage({ className }) {
           variant: "destructive",
         })
       })
-      
+
       // Re-setup community invite listeners
       newSocket.on('community-invite', async (data) => {
         console.log('[ChatPage] Received community-invite notification:', data);
         const { requestId, senderId, senderInfo } = data
-        
+
         toast({
           title: "Community Invitation",
           description: `${senderInfo?.name || 'Someone'} invited you to join a community`,
@@ -451,7 +451,7 @@ export function ChatPage({ className }) {
           ),
         })
       })
-      
+
       newSocket.on('community-invite-accepted', async (data) => {
         console.log('[ChatPage] Received community-invite-accepted notification:', data);
         const { receiverInfo } = data
@@ -460,10 +460,10 @@ export function ChatPage({ className }) {
           description: `${receiverInfo?.name || 'The freelancer'} accepted your community invitation`,
         })
       })
-      
+
       setSocket(newSocket)
     }
-    
+
     window.addEventListener('auth:token-refreshed', onRefreshed)
     return () => window.removeEventListener('auth:token-refreshed', onRefreshed)
   }, [socket, currentUserId, selectedUserId, toast])
@@ -479,18 +479,18 @@ export function ChatPage({ className }) {
       if (isCommunityChat && selectedCommunityId) {
         try {
           const messagesData = await chatAPI.getCommunityMessages(selectedCommunityId)
-          
+
           // Batch get all unique sender IDs
           const uniqueSenderIds = [...new Set(messagesData.map(msg => msg.senderId).filter(Boolean))]
           const userMap = new Map()
-          
+
           if (uniqueSenderIds.length > 0) {
             try {
               // Batch fetch users (split into chunks of 100 if needed)
               const chunkSize = 100
               for (let i = 0; i < uniqueSenderIds.length; i += chunkSize) {
                 const chunk = uniqueSenderIds.slice(i, i + chunkSize)
-                const res = await fetch('http://localhost:3001/api/auth/get-users-batch', {
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/auth/get-users-batch`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ uids: chunk })
@@ -508,7 +508,7 @@ export function ChatPage({ className }) {
               console.error('Error batch fetching senders:', err)
             }
           }
-          
+
           // Transform messages with sender names from batch lookup
           const transformedMessages = messagesData.map((msg) => {
             const sender = userMap.get(msg.senderId)
@@ -575,7 +575,7 @@ export function ChatPage({ className }) {
         } else {
           return
         }
-        
+
         if (response.success && response.message) {
           const newMessage = {
             ...response.message,
@@ -594,10 +594,10 @@ export function ChatPage({ className }) {
               prevCommunities.map((comm) =>
                 comm.id === selectedCommunityId
                   ? {
-                      ...comm,
-                      lastMessage: content.trim(),
-                      lastMessageTime: newMessage.timestamp,
-                    }
+                    ...comm,
+                    lastMessage: content.trim(),
+                    lastMessageTime: newMessage.timestamp,
+                  }
                   : comm
               )
             )
@@ -606,10 +606,10 @@ export function ChatPage({ className }) {
               prevUsers.map((user) =>
                 user.id === selectedUserId
                   ? {
-                      ...user,
-                      lastMessage: content.trim(),
-                      lastMessageTime: newMessage.timestamp,
-                    }
+                    ...user,
+                    lastMessage: content.trim(),
+                    lastMessageTime: newMessage.timestamp,
+                  }
                   : user
               )
             )

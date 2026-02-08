@@ -11,11 +11,30 @@ const server = http.createServer(app);
 
 console.log('🚀 Starting MindBridge Server...');
 
-// Simple CORS setup - allow all origins for now
+// CORS Configuration - Production Ready
+const allowedOrigins = process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(',').map(url => url.trim())
+    : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-    origin: true,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // In development, allow all origins
+        if (process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+
+        // In production, check against allowed origins
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -123,10 +142,12 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5002;
 
-// Socket.io setup
+// Socket.io setup with production-ready CORS
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        origin: process.env.NODE_ENV === 'development'
+            ? true
+            : allowedOrigins,
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -169,10 +190,16 @@ io.on('connection', (socket) => {
     });
 });
 
+const serverUrl =
+    process.env.NODE_ENV === 'production'
+        ? `port ${PORT}`
+        : `http://localhost:${PORT}`;
+
 server.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`🔗 Test: http://localhost:${PORT}/api/test`);
-    console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
+    console.log(`🚀 Server running on ${serverUrl}`);
+    console.log(`🔗 Test: ${process.env.NODE_ENV === 'production' ? '' : 'http://localhost:' + PORT}/api/test`);
+    console.log(`❤️  Health: ${process.env.NODE_ENV === 'production' ? '' : 'http://localhost:' + PORT}/api/health`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 });
 
 module.exports = { app, io };
