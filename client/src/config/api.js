@@ -1,5 +1,8 @@
-// API Configuration
+// API Configuration - Single source of truth
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
+// Socket.IO URL - uses same base URL as API
+export const SOCKET_URL = API_BASE_URL;
 
 export const API_ENDPOINTS = {
     // Auth endpoints

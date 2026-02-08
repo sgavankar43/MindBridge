@@ -10,8 +10,7 @@ import { cn } from "@/lib/utils"
 import { chatAPI, communityAPI } from "@/services/api"
 import { getAuthToken, setAuthToken } from "@/services/api"
 import { getAuth } from "firebase/auth"
-
-const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:5002"
+import API_BASE_URL, { SOCKET_URL } from "@/config/api"
 
 export function ChatPage({ className }) {
   const [selectedUserId, setSelectedUserId] = React.useState(null)
@@ -82,7 +81,7 @@ export function ChatPage({ className }) {
           // If target user not in conversations, fetch their info
           if (!usersList.find(u => u.id === targetUid)) {
             try {
-              const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/auth/get-user`, {
+              const res = await fetch(`${API_BASE_URL}/api/auth/get-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uid: targetUid })
@@ -490,7 +489,7 @@ export function ChatPage({ className }) {
               const chunkSize = 100
               for (let i = 0; i < uniqueSenderIds.length; i += chunkSize) {
                 const chunk = uniqueSenderIds.slice(i, i + chunkSize)
-                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/auth/get-users-batch`, {
+                const res = await fetch(`${API_BASE_URL}/api/auth/get-users-batch`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ uids: chunk })
