@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Send, Plus, MessageSquare, Trash2, MoreVertical } from "lucide-react"
-import { apiRequest } from "../config/api"
-import API_BASE_URL from "../config/api"
+import API_BASE_URL, { apiRequest } from "../config/api"
 
 export default function Messages() {
   const [sessions, setSessions] = useState([])
