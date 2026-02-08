@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Search, Send, Paperclip, Smile, MoreVertical, Phone, Video, ArrowLeft } from "lucide-react"
-import { apiRequest } from "../config/api"
+import API_BASE_URL, { apiRequest, SOCKET_URL } from "../config/api"
 import { useUser } from "../context/UserContext"
 import { io } from "socket.io-client"
 
@@ -32,7 +32,7 @@ export default function DirectMessages() {
     // Initial setup: Connect socket and fetch conversations
     useEffect(() => {
         // Initialize socket connection
-        const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5002", {
+        const socket = io(SOCKET_URL, {
             withCredentials: true,
             auth: {
                 token: localStorage.getItem('token')
@@ -98,7 +98,7 @@ export default function DirectMessages() {
 
     const fetchConversations = async () => {
         try {
-            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/conversations`)
+            const data = await apiRequest(`${API_BASE_URL}/api/messages/conversations`)
 
             const formatted = data.map(c => ({
                 id: c.id,
@@ -123,7 +123,7 @@ export default function DirectMessages() {
 
     const fetchMessages = async (userId) => {
         try {
-            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/${userId}`)
+            const data = await apiRequest(`${API_BASE_URL}/api/messages/${userId}`)
 
             const formatted = data.map(m => ({
                 id: m._id,
@@ -186,8 +186,9 @@ export default function DirectMessages() {
             setMessageInput("");
 
             try {
-                await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages`, {
+                await apiRequest(`${API_BASE_URL}/api/messages`, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         recipientId: selectedUser.id || selectedUser._id,
                         text: text
