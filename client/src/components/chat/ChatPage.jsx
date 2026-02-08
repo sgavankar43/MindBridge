@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { chatAPI, communityAPI } from "@/services/api"
 import { getAuthToken, setAuthToken } from "@/services/api"
 import { getAuth } from "firebase/auth"
-import API_BASE_URL, { SOCKET_URL } from "@/config/api"
+import API_BASE_URL, { SOCKET_URL, apiRequest } from "@/config/api"
 
 export function ChatPage({ className }) {
   const [selectedUserId, setSelectedUserId] = React.useState(null)
@@ -81,41 +81,46 @@ export function ChatPage({ className }) {
           // If target user not in conversations, fetch their info
           if (!usersList.find(u => u.id === targetUid)) {
             try {
-              const res = await fetch(`${API_BASE_URL}/api/auth/get-user`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: targetUid })
-              })
-              if (res.ok) {
-                const data = await res.json()
-                // Handle both success with user and success with null user
-                if (data?.success && data?.user) {
-                  const name = data.user.name || (data.user.email ? data.user.email.split('@')[0] : 'User')
-                  const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-                  setUsers(prev => [{
-                    id: targetUid,
-                    name,
-                    avatar,
-                    status: 'online',
-                    unreadCount: 0,
-                    role: data.user.role || ''
-                  }, ...prev])
-                } else {
-                  // User not found, use fallback
-                  const name = 'User'
-                  const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(targetUid)}`
-                  setUsers(prev => [{
-                    id: targetUid,
-                    name,
-                    avatar,
-                    status: 'online',
-                    unreadCount: 0,
-                    role: ''
-                  }, ...prev])
-                }
+              // Use existing /api/users/:id/profile endpoint with apiRequest helper
+              const data = await apiRequest(`${API_BASE_URL}/api/users/${targetUid}/profile`)
+
+              if (data?.user) {
+                const name = data.user.name || (data.user.email ? data.user.email.split('@')[0] : 'User')
+                const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+                setUsers(prev => [{
+                  id: targetUid,
+                  name,
+                  avatar,
+                  status: 'online',
+                  unreadCount: 0,
+                  role: data.user.role || ''
+                }, ...prev])
+              } else {
+                // User not found, use fallback
+                const name = 'User'
+                const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(targetUid)}`
+                setUsers(prev => [{
+                  id: targetUid,
+                  name,
+                  avatar,
+                  status: 'online',
+                  unreadCount: 0,
+                  role: ''
+                }, ...prev])
               }
             } catch (err) {
               console.error('Error fetching target user:', err)
+              // Use fallback on error
+              const name = 'User'
+              const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(targetUid)}`
+              setUsers(prev => [{
+                id: targetUid,
+                name,
+                avatar,
+                status: 'online',
+                unreadCount: 0,
+                role: ''
+              }, ...prev])
             }
           }
           setSelectedUserId(targetUid)
@@ -485,24 +490,22 @@ export function ChatPage({ className }) {
 
           if (uniqueSenderIds.length > 0) {
             try {
-              // Batch fetch users (split into chunks of 100 if needed)
-              const chunkSize = 100
-              for (let i = 0; i < uniqueSenderIds.length; i += chunkSize) {
-                const chunk = uniqueSenderIds.slice(i, i + chunkSize)
-                const res = await fetch(`${API_BASE_URL}/api/auth/get-users-batch`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ uids: chunk })
-                })
-                if (res.ok) {
-                  const data = await res.json()
-                  if (data?.users) {
-                    data.users.forEach(user => {
-                      userMap.set(user.uid, user)
-                    })
-                  }
+              // Fetch users in parallel using existing /api/users/:id/profile endpoint
+              const userPromises = uniqueSenderIds.map(uid =>
+                apiRequest(`${API_BASE_URL}/api/users/${uid}/profile`)
+                  .then(data => ({ uid, user: data?.user }))
+                  .catch(err => {
+                    console.error(`Error fetching user ${uid}:`, err)
+                    return { uid, user: null }
+                  })
+              )
+
+              const results = await Promise.all(userPromises)
+              results.forEach(({ uid, user }) => {
+                if (user) {
+                  userMap.set(uid, user)
                 }
-              }
+              })
             } catch (err) {
               console.error('Error batch fetching senders:', err)
             }
