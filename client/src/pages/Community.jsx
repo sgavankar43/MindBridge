@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Heart, MessageCircle, Share2, MoreHorizontal, Image, Smile, Send, Search, Filter } from "lucide-react"
 import { apiRequest } from "../config/api"
+import API_BASE_URL from "../config/api"
 import { useUser } from "../context/UserContext"
 
 export default function Community() {
@@ -49,7 +50,7 @@ export default function Community() {
 
     const fetchSuggestions = async () => {
         try {
-            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/suggestions`)
+            const data = await apiRequest(`${API_BASE_URL}/api/users/suggestions`)
             setSuggestedUsers(Array.isArray(data) ? data : [])
         } catch (error) {
             console.error("Error fetching suggestions:", error)
@@ -77,7 +78,7 @@ export default function Community() {
     const fetchPosts = async () => {
         setLoading(true)
         try {
-            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts`)
+            const data = await apiRequest(`${API_BASE_URL}/api/posts`)
             setPosts(Array.isArray(data) ? data : [])
         } catch (error) {
             console.error("Error fetching posts:", error)
@@ -89,7 +90,7 @@ export default function Community() {
 
     const fetchConversations = async () => {
         try {
-            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/messages/conversations`)
+            const data = await apiRequest(`${API_BASE_URL}/api/messages/conversations`)
             // Backend returns: { id, name, email, role, lastMessage, timestamp, unread }
             if (Array.isArray(data)) {
                 const formatted = data.map(c => ({
@@ -117,7 +118,7 @@ export default function Community() {
         try {
             if (activeTab === "posts") {
                 const queryParams = new URLSearchParams({ search: searchQuery })
-                const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts?${queryParams}`)
+                const data = await apiRequest(`${API_BASE_URL}/api/posts?${queryParams}`)
                 setPosts(Array.isArray(data) ? data : [])
             } else {
                 const queryParams = new URLSearchParams({
@@ -127,7 +128,7 @@ export default function Community() {
                     minFees: filters.minFees,
                     maxFees: filters.maxFees
                 })
-                const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/search?${queryParams}`)
+                const data = await apiRequest(`${API_BASE_URL}/api/users/search?${queryParams}`)
                 setUsers(Array.isArray(data) ? data : [])
             }
         } catch (error) {
@@ -150,7 +151,7 @@ export default function Community() {
             if (hashtags.length > 0) formData.append('hashtags', JSON.stringify(hashtags))
 
             const token = localStorage.getItem('token')
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts`, {
+            const response = await fetch(`${API_BASE_URL}/api/posts`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -170,7 +171,7 @@ export default function Community() {
 
     const handleLike = async (postId) => {
         try {
-            await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts/${postId}/like`, {
+            await apiRequest(`${API_BASE_URL}/api/posts/${postId}/like`, {
                 method: 'PUT'
             })
             // Update local state efficiently
@@ -195,7 +196,7 @@ export default function Community() {
         if (!commentText.trim()) return
 
         try {
-            const newComment = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/posts/${postId}/comments`, {
+            const newComment = await apiRequest(`${API_BASE_URL}/api/posts/${postId}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({ content: commentText })
             });
@@ -220,7 +221,7 @@ export default function Community() {
 
     const handleFollow = async (userId) => {
         try {
-            await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/users/${userId}/follow`, {
+            await apiRequest(`${API_BASE_URL}/api/users/${userId}/follow`, {
                 method: 'PUT'
             })
             // Optionally remove from suggested list or show "Followed"

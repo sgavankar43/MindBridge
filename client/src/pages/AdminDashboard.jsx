@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useUser } from "../context/UserContext"
 import { useNavigate } from "react-router-dom"
 import { apiRequest } from "../config/api"
+import API_BASE_URL from "../config/api"
 import { CheckCircle, XCircle, FileText, Download } from "lucide-react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
@@ -22,7 +23,7 @@ export default function AdminDashboard() {
 
     const fetchPendingTherapists = async () => {
         try {
-            const data = await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/admin/pending-therapists`)
+            const data = await apiRequest(`${API_BASE_URL}/api/admin/pending-therapists`)
             setTherapists(data)
         } catch (error) {
             console.error('Error fetching therapists:', error)
@@ -33,7 +34,7 @@ export default function AdminDashboard() {
 
     const handleVerify = async (id, status) => {
         try {
-            await apiRequest(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/admin/therapist/${id}/verify`, {
+            await apiRequest(`${API_BASE_URL}/api/admin/therapist/${id}/verify`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })

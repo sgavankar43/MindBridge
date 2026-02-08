@@ -196,11 +196,16 @@ VITE_API_URL=https://api.yourdomain.com
 
 ## 📝 Quick Deploy Commands
 
-### Deploy Both Client & Server:
+### Install Dependencies:
 ```bash
-# From root directory
-npm run build:all    # Build both
-npm run deploy:all   # Deploy both (if configured)
+# From root directory - install all dependencies
+npm run install:all
+```
+
+### Development:
+```bash
+# Run both client and server in development mode
+npm run dev
 ```
 
 ### Individual Deployments:
