@@ -3,8 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { useUser } from "../context/UserContext"
-import { apiRequest } from "../config/api"
-import API_BASE_URL from "../config/api"
+import API_BASE_URL, { apiRequest } from "../config/api"
 import {
   Mail, Phone, Linkedin, Github, Globe,
   Camera, Edit2, MapPin, Briefcase,
@@ -126,8 +125,8 @@ export default function Profile() {
                     <button
                       onClick={handleFollow}
                       className={`px-6 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 ${isFollowing
-                          ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                          : 'bg-[#e74c3c] text-white hover:bg-[#c0392b]'
+                        ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        : 'bg-[#e74c3c] text-white hover:bg-[#c0392b]'
                         }`}
                     >
                       {isFollowing ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}

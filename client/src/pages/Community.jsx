@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
 import { Heart, MessageCircle, Share2, MoreHorizontal, Image, Smile, Send, Search, Filter } from "lucide-react"
-import { apiRequest } from "../config/api"
-import API_BASE_URL from "../config/api"
+import API_BASE_URL, { apiRequest } from "../config/api"
 import { useUser } from "../context/UserContext"
 
 export default function Community() {
