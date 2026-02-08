@@ -174,7 +174,7 @@ export default function Community() {
                 method: 'PUT'
             })
             // Update local state efficiently
-            setPosts(posts.map(post => {
+            setPosts(prev => prev.map(post => {
                 if (post._id === postId) {
                     const isLiked = post.likes.includes(user._id)
                     return {
@@ -197,11 +197,12 @@ export default function Community() {
         try {
             const newComment = await apiRequest(`${API_BASE_URL}/api/posts/${postId}/comments`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: commentText })
             });
 
             if (newComment) {
-                setPosts(posts.map(post => {
+                setPosts(prev => prev.map(post => {
                     if (post._id === postId) {
                         return {
                             ...post,
@@ -224,7 +225,7 @@ export default function Community() {
                 method: 'PUT'
             })
             // Optionally remove from suggested list or show "Followed"
-            setSuggestedUsers(suggestedUsers.filter(u => u._id !== userId))
+            setSuggestedUsers(prev => prev.filter(u => u._id !== userId))
         } catch (error) {
             console.error("Error following user:", error)
         }

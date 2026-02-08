@@ -74,6 +74,7 @@ export default function Messages() {
       try {
         const response = await apiRequest(`${API_BASE_URL}/api/ai/message`, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId: activeSessionId,
             message: userMessage
@@ -106,7 +107,7 @@ export default function Messages() {
             messages: [newMessage, aiMessage],
             updatedAt: new Date().toISOString()
           };
-          setSessions([newSession, ...sessions]);
+          setSessions(prev => [newSession, ...prev]);
           setActiveSessionId(response.sessionId);
         }
 
@@ -158,6 +159,7 @@ export default function Messages() {
       try {
         const response = await apiRequest(`${API_BASE_URL}/api/ai/message`, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: userMessage
           })
@@ -172,7 +174,7 @@ export default function Messages() {
           ],
           updatedAt: new Date().toISOString()
         };
-        setSessions([newSession, ...sessions]);
+        setSessions(prev => [newSession, ...prev]);
         setActiveSessionId(response.sessionId);
       } catch (error) {
         console.error("Error creating new session with message:", error);
@@ -186,7 +188,7 @@ export default function Messages() {
       const response = await apiRequest(`${API_BASE_URL}/api/ai/sessions`, {
         method: 'POST'
       });
-      setSessions([response, ...sessions]);
+      setSessions(prev => [response, ...prev]);
       setActiveSessionId(response._id);
     } catch (error) {
       console.error("Error creating session:", error);
