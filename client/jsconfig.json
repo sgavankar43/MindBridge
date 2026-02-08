@@ -5,5 +5,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "tsconfig.json"]
+  "include": ["src"]
 }
