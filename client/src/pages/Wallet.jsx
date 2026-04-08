@@ -150,6 +150,7 @@ export default function WalletPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+
     // ── Fetch transactions ──────────────────────────────────────────────────────
     const fetchTransactions = useCallback(async (page = 1) => {
         setTxLoading(true)
@@ -183,38 +184,52 @@ export default function WalletPage() {
     // ── Handle ?status=success redirect from Stripe ──────────────────────────
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
-        if (params.get("status") === "success") {
-            showToast("Payment successful! Credits are being processed.", "success")
+        const status = params.get("status")
+        const sessionId = params.get("session_id")
+        
+        if (status === "success" && sessionId) {
+            showToast("Payment successful! Verifying your credits...", "info")
             window.history.replaceState({}, "", "/wallet")
 
-            // Initial refresh
+            // Call verify endpoint in case webhook was delayed or missed
+            const verifyPayment = async () => {
+                try {
+                    await apiRequest(`${API_BASE_URL}/api/wallet/verify-session`, {
+                        method: "POST",
+                        body: JSON.stringify({ sessionId })
+                    })
+                    showToast("Credits added to your wallet successfully!", "success")
+                } catch (err) {
+                    if (err.message === 'Already processed via webhook') {
+                        // Show success anyway since it means the credits are there
+                        showToast("Credits added to your wallet successfully!", "success")
+                    } else if (err.message === 'Payment incomplete') {
+                        showToast("Payment not yet completed.", "info")
+                    } else {
+                        // Let the user know there's a real verification error
+                        showToast("Verification failed: " + err.message, "error")
+                    }
+                    console.error("Verification note:", err.message)
+                } finally {
+                    // Always refresh data
+                    fetchBalance(true)
+                    fetchTransactions()
+                    refreshWallet()
+                }
+            }
+            verifyPayment()
+
+        } else if (status === "success") {
+            // Fallback if no session ID provided
+            showToast("Payment successful! Credits are being processed.", "success")
+            window.history.replaceState({}, "", "/wallet")
             fetchBalance(true)
             fetchTransactions()
             refreshWallet()
-
-            // Poll for balance updates since webhooks can be slightly delayed
-            let attempts = 0
-            const maxAttempts = 5
-            const pollInterval = setInterval(async () => {
-                attempts++
-                const lastBalance = balance
-                await fetchBalance(true)
-
-                // If balance changed or we hit max attempts, stop polling
-                if (balance !== lastBalance || attempts >= maxAttempts) {
-                    clearInterval(pollInterval)
-                    fetchTransactions() // Refresh transactions again to show the latest
-                }
-            }, 3000)
-
-            return () => clearInterval(pollInterval)
-        } else if (params.get("status") === "cancelled") {
+        } else if (status === "cancelled") {
             showToast("Payment was cancelled.", "info")
             window.history.replaceState({}, "", "/wallet")
         }
-        // balance depends on fetchBalance updating it, but we want to know if it CHANGED.
-        // However, adding 'balance' as a dep might cause infinite loops if fetchBalance is not stable.
-        // In Wallet.jsx, fetchBalance is a useCallback with [] deps, so it's stable.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -269,10 +284,17 @@ export default function WalletPage() {
         setTherapistSearching(true)
         debounceRef.current = setTimeout(async () => {
             try {
-                const res = await apiRequest(
-                    `${API_BASE_URL}/api/users/therapists/search?q=${encodeURIComponent(val.trim())}`
+                // Corrected endpoint and query parameter
+                const results = await apiRequest(
+                    `${API_BASE_URL}/api/users/search?role=therapist&query=${encodeURIComponent(val.trim())}`
                 )
-                setTherapistResults(res.therapists || [])
+                // searchUsers returns an array directly, map _id to id for internal state consistency
+                setTherapistResults(results.map(t => ({
+                    id: t._id,
+                    name: t.name,
+                    avatar: t.avatar,
+                    profession: t.profession
+                })) || [])
             } catch {
                 setTherapistResults([])
             } finally {

@@ -224,6 +224,87 @@ exports.handleWebhook = async (req, res) => {
     }
 };
 
+// ─── POST /api/wallet/verify-session ─────────────────────────────────────────
+
+/**
+ * Fallback verification endpoint.
+ * Called by the frontend on successful redirect with the session_id.
+ * Allows credits to be added even if the webhook failed or wasn't forwarded locally.
+ */
+exports.verifySession = async (req, res, next) => {
+    try {
+        const mongoose = require('mongoose');
+        const stripe = getStripe();
+        const { sessionId } = req.body;
+
+        if (!sessionId) {
+            return res.status(400).json({ success: false, message: 'Missing session ID' });
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status !== 'paid') {
+            return res.status(400).json({ success: false, message: 'Payment incomplete' });
+        }
+
+        const userId = session.metadata?.userId;
+        const credits = parseInt(session.metadata?.credits, 10);
+        // Fallback to sessionId if payment_intent is missing (common with some stripe settings/modes)
+        const paymentIntentId = session.payment_intent || session.id;
+
+        if (!userId || !credits || !paymentIntentId) {
+            console.error('[Verify] Invalid session data:', { userId, credits, paymentIntentId });
+            return res.status(400).json({ success: false, message: 'Invalid session data' });
+        }
+
+        // Verify it belongs to the authenticated user
+        if (userId !== req.user._id.toString()) {
+            console.error('[Verify] Unauthorized session user mismatch:', userId, req.user._id.toString());
+            return res.status(403).json({ success: false, message: 'Unauthorized session' });
+        }
+
+        // Idempotency check 1 (outside transaction)
+        let existing = await Transaction.findOne({ paymentIntentId });
+        if (existing) {
+            return res.status(200).json({ success: true, message: 'Already processed via webhook' });
+        }
+
+        const dbSession = await mongoose.startSession();
+        try {
+            await dbSession.withTransaction(async () => {
+                // Idempotency check 2 (inside transaction to prevent race conditions)
+                existing = await Transaction.findOne({ paymentIntentId }).session(dbSession);
+                if (existing) return;
+
+                console.log(`[Verify] Updating user balance for userId: ${userId}`);
+                await User.findByIdAndUpdate(
+                    userId,
+                    { $inc: { walletBalance: credits } },
+                    { session: dbSession, new: true, runValidators: false }
+                );
+
+                console.log('[Verify] Creating transaction record');
+                await Transaction.create([{
+                    from: null,
+                    to: userId,
+                    amount: credits,
+                    type: 'CREDIT_PURCHASE',
+                    status: 'SUCCESS',
+                    paymentIntentId: paymentIntentId,
+                }], { session: dbSession });
+                
+                console.log(`[Verify] SUCCESS: Credited ${credits} to user ${userId} manually.`);
+            });
+            res.status(200).json({ success: true, message: 'Credits successfully verified and added' });
+        } finally {
+            dbSession.endSession();
+        }
+
+    } catch (err) {
+        next(err);
+    }
+};
+
 // ─── GET /api/wallet/balance ─────────────────────────────────────────────────
 
 /**

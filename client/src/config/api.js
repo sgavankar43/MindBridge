@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
     MOOD: `${API_BASE_URL}/api/users/mental-health/mood`,
     STREAK: `${API_BASE_URL}/api/users/mental-health/streak`,
     POSTS: `${API_BASE_URL}/api/posts`,
+    WALLET: `${API_BASE_URL}/api/wallet`,
 
     // Health check
     HEALTH: `${API_BASE_URL}/api/health`,

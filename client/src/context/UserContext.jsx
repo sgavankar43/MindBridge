@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { API_ENDPOINTS, apiRequest } from '../config/api'
+import API_BASE_URL from '../config/api'
 
 const UserContext = createContext()
 
@@ -15,52 +16,109 @@ export const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [walletBalance, setWalletBalance] = useState(0)
 
-    // Initialize user from localStorage
+    // Guard: prevents initializeUser from running more than once.
+    // React 18 StrictMode intentionally mounts components TWICE in development
+    // to expose side effects — this ref survives the remount and blocks the
+    // second execution.
+    const initializedRef = useRef(false)
+
+    // ── Fetch wallet balance ──────────────────────────────────────────────────
+    const refreshWallet = useCallback(async () => {
+        try {
+            const res = await apiRequest(`${API_BASE_URL}/api/wallet/balance`)
+            const bal = res?.data?.walletBalance ?? 0
+            setWalletBalance(bal)
+            // Keep it in sync with the stored user object so other reads are consistent
+            setUser(prev => {
+                if (!prev) return prev
+                const updated = { ...prev, walletBalance: bal }
+                localStorage.setItem('user', JSON.stringify(updated))
+                return updated
+            })
+        } catch {
+            // Silently ignore — user might not have a wallet yet
+        }
+    }, [])
+
+    // ── Initialize user from localStorage ────────────────────────────────────
     useEffect(() => {
-        const initializeUser = async () => {
-            try {
-                const token = localStorage.getItem('token')
-                const storedUser = localStorage.getItem('user')
+        // Block the second StrictMode invocation — ref persists across remounts
+        if (initializedRef.current) return
+        initializedRef.current = true
 
-                if (token && storedUser) {
+        const controller = new AbortController()
+
+        const initializeUser = async () => {
+            const token = localStorage.getItem('token')
+            const storedUser = localStorage.getItem('user')
+
+            if (token && storedUser) {
+                try {
                     const userData = JSON.parse(storedUser)
+
+                    // ✅ Restore from localStorage and unblock the UI immediately.
+                    // Pages are visible before any network call is made.
                     setUser(userData)
                     setIsAuthenticated(true)
+                    setWalletBalance(userData.walletBalance ?? 0)
+                    setLoading(false)   // ← INSTANT — no waiting for network
 
-                    // Optionally verify token with backend
-                    try {
-                        const response = await apiRequest(API_ENDPOINTS.ME)
-                        setUser(response.user)
-                    } catch (error) {
-                        console.warn('Token verification failed:', error)
-                        // Keep using stored user data if verification fails
+                    // Background: verify token + refresh profile (won't block UI)
+                    if (!controller.signal.aborted) {
+                        apiRequest(API_ENDPOINTS.ME)
+                            .then(res => {
+                                if (!controller.signal.aborted) setUser(res.user)
+                            })
+                            .catch(() => {
+                                // Token is invalid (e.g. old token signed with broken secret)
+                                // Silently log the user out so they can log in fresh
+                                if (!controller.signal.aborted) logout()
+                            })
                     }
+
+                    // Background: fetch live wallet balance (won't block UI)
+                    if (!controller.signal.aborted) {
+                        refreshWallet()
+                    }
+
+                } catch {
+                    // Corrupt localStorage data — clear it and show login
+                    logout()
+                    setLoading(false)
                 }
-            } catch (error) {
-                console.error('Error initializing user:', error)
-                logout()
-            } finally {
+            } else {
+                // No stored session — show login page immediately
                 setLoading(false)
             }
         }
 
         initializeUser()
+
+        return () => controller.abort()
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    const login = (userData, token) => {
-        // Check verification status for therapists
-        if (userData.role === 'therapist' && userData.verificationStatus === 'pending') {
-            // We store the token to allow basic profile access if needed,
-            // but the UI should redirect them.
-            // However, typically we might not even want to log them in fully if pending.
-            // For this requirement, we'll store it but components will check status.
-        }
-
+    // ── Auth actions ──────────────────────────────────────────────────────────
+    const login = async (userData, token) => {
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(userData))
         setUser(userData)
         setIsAuthenticated(true)
+
+        // Fetch wallet balance right after login so the UI is immediately correct
+        try {
+            const res = await apiRequest(`${API_BASE_URL}/api/wallet/balance`)
+            const bal = res?.data?.walletBalance ?? 0
+            setWalletBalance(bal)
+            const withBal = { ...userData, walletBalance: bal }
+            localStorage.setItem('user', JSON.stringify(withBal))
+            setUser(withBal)
+        } catch {
+            setWalletBalance(0)
+        }
     }
 
     const logout = () => {
@@ -68,21 +126,29 @@ export const UserProvider = ({ children }) => {
         localStorage.removeItem('user')
         setUser(null)
         setIsAuthenticated(false)
+        setWalletBalance(0)
     }
 
     const updateUser = (updatedData) => {
         const newUserData = { ...user, ...updatedData }
         localStorage.setItem('user', JSON.stringify(newUserData))
         setUser(newUserData)
+        // Keep walletBalance atom in sync if it was part of the update
+        if ('walletBalance' in updatedData) {
+            setWalletBalance(updatedData.walletBalance)
+        }
     }
 
+    // ── Context value ─────────────────────────────────────────────────────────
     const value = {
         user,
         loading,
         isAuthenticated,
+        walletBalance,
         login,
         logout,
-        updateUser
+        updateUser,
+        refreshWallet,   // call this after any payment or transfer to sync balance
     }
 
     return (

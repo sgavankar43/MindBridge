@@ -19,7 +19,7 @@ async function testAI() {
     try {
         console.log("🔄 Attempting to connect to Gemini API...");
         const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest"});
 
         const result = await model.generateContent("Say 'Hello, World!' if you can hear me.");
         const response = await result.response;

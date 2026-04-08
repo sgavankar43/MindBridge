@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/Header"
-import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause, Heart, MessageCircle } from "lucide-react"
+import { CheckCircle, Circle, Plus, Trash2, Flame, Calendar, Smile, Meh, Frown, Play, Pause, Heart, MessageCircle, Wallet } from "lucide-react"
 import { apiRequest, API_ENDPOINTS } from "../config/api"
 
 export default function Dashboard() {
@@ -37,14 +37,16 @@ export default function Dashboard() {
   ]
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
+  const [balance, setBalance] = useState(0)
   const [newTask, setNewTask] = useState("")
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [postsData, healthData] = await Promise.all([
+        const [postsData, healthData, walletData] = await Promise.all([
           apiRequest(API_ENDPOINTS.POSTS).catch(() => []),
-          apiRequest(API_ENDPOINTS.MENTAL_HEALTH).catch(() => null)
+          apiRequest(API_ENDPOINTS.MENTAL_HEALTH).catch(() => null),
+          apiRequest(`${API_ENDPOINTS.WALLET}/balance`).catch(() => ({ data: { walletBalance: 0 } }))
         ])
 
         // Process Posts
@@ -68,6 +70,11 @@ export default function Dashboard() {
           setCurrentStreak(healthData.streakCount || 0)
           setLongestStreak(healthData.longestStreak || 0)
           if (healthData.currentMood) setSelectedMood(healthData.currentMood)
+        }
+
+        // Process Wallet
+        if (walletData && walletData.data) {
+          setBalance(walletData.data.walletBalance)
         }
       } catch (error) {
         console.error("Failed to load dashboard data:", error)
@@ -152,8 +159,31 @@ export default function Dashboard() {
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mt-4 sm:mt-8">
 
-          {/* Left Column - Task Manager & Community Updates */}
+          {/* Left Column - Wallet, Task Manager & Community Updates */}
           <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+            {/* Wallet Balance Widget - Integrated */}
+            <div className="bg-gradient-to-br from-[#e74c3c] to-[#c0392b] rounded-2xl sm:rounded-3xl p-6 shadow-lg text-white relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+              <div className="relative z-10">
+                <p className="text-white/70 text-sm font-medium mb-1 flex items-center gap-2">
+                  <Wallet className="w-4 h-4" /> Available Balance
+                </p>
+                <div className="flex items-end gap-2">
+                  <h3 className="text-4xl font-bold tracking-tight">
+                    {balance.toLocaleString()}
+                  </h3>
+                  <span className="text-white/60 text-sm mb-1.5 font-medium">credits</span>
+                </div>
+                <button
+                  onClick={() => navigate('/wallet')}
+                  className="mt-6 w-full flex items-center justify-center gap-2 py-3 bg-white text-[#e74c3c] rounded-xl text-sm font-bold hover:bg-gray-100 transition-all shadow-sm"
+                >
+                  <Plus className="w-4 h-4" /> Add Credits
+                </button>
+              </div>
+              {/* Abstract decorative shape */}
+              <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-500"></div>
+            </div>
+
             {/* Task Manager */}
             <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">

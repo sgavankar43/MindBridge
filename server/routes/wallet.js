@@ -38,6 +38,17 @@ router.post(
     walletController.createCheckoutSession
 );
 
+/**
+ * POST /api/wallet/verify-session
+ * Verifies a checkout session manually (fallback for local dev or missed webhooks).
+ * Body: { sessionId: string }
+ */
+router.post(
+    '/verify-session',
+    authenticateToken,
+    walletController.verifySession
+);
+
 // ─── Stripe webhook (unauthenticated, raw body required) ─────────────────────
 //
 // NOTE: This route needs the raw request body for signature verification.

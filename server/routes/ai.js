@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const AISession = require('../models/AISession');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require("@google/genai");
 const { authenticateToken } = require('../middleware/auth');
 
 // Initialize Gemini
@@ -9,7 +9,11 @@ const API_KEY = process.env.GEMINI_API_KEY;
 if (!API_KEY) {
     console.warn("⚠️  GEMINI_API_KEY is missing from environment variables. AI Chat will not function correctly.");
 }
-const genAI = new GoogleGenerativeAI(API_KEY || 'dummy_key_to_prevent_crash');
+
+const genAI = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 
 const SYSTEM_INSTRUCTION = `You are MindBridge AI, a compassionate, empathetic, and professional mental health assistant.
 Your goal is to provide supportive listening, coping strategies, and psychoeducation.
@@ -153,23 +157,25 @@ router.post('/message', authenticateToken, async (req, res) => {
                 historyForGemini = merged;
             }
 
-            const model = genAI.getGenerativeModel({
-                model: "gemini-1.5-flash",
-                systemInstruction: SYSTEM_INSTRUCTION
-            });
+            const response = await genAI.models.generateContent({
+ model: "gemini-3-flash-preview"
+,
+  systemInstruction: SYSTEM_INSTRUCTION,
+  contents: [
+    ...historyForGemini,
+    {
+      role: "user",
+      parts: [{ text: message }]
+    }
+  ]
+});
 
-            const chat = model.startChat({
-                history: historyForGemini,
-                generationConfig: {
-                    maxOutputTokens: 1000,
-                },
-            });
+const responseText = response.text;
 
-            const result = await chat.sendMessage(message);
-            const responseText = result.response.text();
+
 
             // Add AI response to history
-            session.messages.push({ role: 'model', content: responseText });
+            session.messages.push({ role: 'ai', content: responseText });
 
             // Update title if it's the first message exchange and still default
             if (session.messages.length <= 2 && session.title === 'New Conversation') {
@@ -185,34 +191,34 @@ router.post('/message', authenticateToken, async (req, res) => {
                 sessionTitle: session.title
             });
         } catch (aiError) {
-            console.error('Gemini API Error:', aiError);
-            console.error('Failed History Payload:', JSON.stringify(history, null, 2)); // Debug logging
-            console.error('Failed Message:', message);
+    console.error('Gemini API Error:', aiError);
+    console.error('Failed Message:', message);
 
-            let errorMessage = "I'm having trouble connecting right now. Please try again later.";
+    let errorMessage = "I'm having trouble connecting right now. Please try again later.";
 
-            // Customize error message for missing key
-            if (aiError.message.includes("GEMINI_API_KEY")) {
-                errorMessage = "The AI service is currently unavailable (System Configuration Error).";
-            } else if (aiError.message.includes("400")) {
-                errorMessage = "I didn't quite catch that. Could you rephrase?";
-            } else if (aiError.message.includes("429") || aiError.message.includes("Quota")) {
-                errorMessage = "I've hit my usage limit for the moment. Please wait a minute and try again (Google API Quota Exceeded).";
-            }
+    if (aiError.message?.includes("GEMINI_API_KEY")) {
+        errorMessage = "AI service is not configured properly.";
+    } else if (aiError.message?.includes("429")) {
+        errorMessage = "API quota exceeded. Please wait and try again.";
+    }
 
-            session.messages.push({ role: 'model', content: errorMessage });
-            await session.save();
+    session.messages.push({ role: 'ai', content: errorMessage });
+    await session.save();
 
-            res.json({
-                response: errorMessage,
-                sessionId: session._id,
-                sessionTitle: session.title
-            });
-        }
+    return res.json({
+        response: errorMessage,
+        sessionId: session._id,
+        sessionTitle: session.title
+    });
+}
+
 
     } catch (error) {
         console.error('Error in AI chat:', error);
-        res.status(500).json({ message: 'Server error' });
+res.status(500).json({
+  error: error.message,
+  stack: error.stack
+});
     }
 });
 
