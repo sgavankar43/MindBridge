@@ -47,6 +47,7 @@ export default function Dashboard() {
           apiRequest(API_ENDPOINTS.POSTS).catch(() => []),
           apiRequest(API_ENDPOINTS.MENTAL_HEALTH).catch(() => null),
           apiRequest(`${API_ENDPOINTS.WALLET}/balance`).catch(() => ({ data: { walletBalance: 0 } }))
+       
         ])
 
         // Process Posts
