@@ -1,9 +1,10 @@
 import {
   Home, LayoutGrid, Heart, LogOut, Calendar,
-  Users, Clock, Settings, Gamepad2, MessageCircle, User, X
+  Users, Clock, Settings, Gamepad2, MessageCircle, User, X, Wallet
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSidebar } from "@/context/SidebarContext";
+
 
 export function Sidebar() {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ export function Sidebar() {
     { path: "/community", icon: Users, label: "Community" },
     { path: "/favorites", icon: Heart, label: "Favorites" },
     { path: "/time", icon: Clock, label: "Time" },
+    { path: "/wallet", icon: Wallet, label: "Wallet" },
   ];
 
   const settingsItem = { path: "/settings", icon: Settings, label: "Settings" };

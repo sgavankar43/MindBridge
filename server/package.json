@@ -18,7 +18,7 @@
     "author": "MindBridge Team",
     "license": "MIT",
     "dependencies": {
-        "@google/generative-ai": "^0.24.1",
+        "@google/genai": "^1.42.0",
         "bcryptjs": "^2.4.3",
         "cloudinary": "^1.41.3",
         "cors": "^2.8.5",
@@ -28,10 +28,12 @@
         "express-validator": "^7.0.1",
         "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
+        "livekit-server-sdk": "^2.15.0",
         "mongoose": "^8.0.3",
         "multer": "^2.0.2",
         "multer-storage-cloudinary": "^4.0.0",
-        "socket.io": "^4.8.1"
+        "socket.io": "^4.8.1",
+        "stripe": "^15.12.0"
     },
     "devDependencies": {
         "nodemon": "^3.0.2"

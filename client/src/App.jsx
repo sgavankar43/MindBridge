@@ -19,6 +19,7 @@ import GameBubblePop from './pages/games/gameBubblePop'
 import GameTileSlider from './pages/games/gameTileSlider'
 import GameGame2048 from './pages/games/gameGame2048'
 import GameColoring from './pages/games/gameColoring'
+import Wallet from './pages/Wallet'
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -93,6 +94,8 @@ function AppRoutes() {
         <Route path="/gameTileSlider" element={<ProtectedRoute><GameTileSlider /></ProtectedRoute>} />
         <Route path="/game2048" element={<ProtectedRoute><GameGame2048 /></ProtectedRoute>} />
         <Route path="/gameColoring" element={<ProtectedRoute><GameColoring /></ProtectedRoute>} />
+        <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+
 
         {/* 404 - Catch all unmatched routes */}
         <Route path="*" element={<NotFound />} />
