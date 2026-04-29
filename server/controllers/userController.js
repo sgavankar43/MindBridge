@@ -1,10 +1,30 @@
 const User = require('../models/User');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
+const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 
 const escapeRegex = (text) => {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
+const parseLanguages = (languages) => {
+    if (languages === undefined) return undefined;
+    if (Array.isArray(languages)) return languages;
+    return JSON.parse(languages || '[]');
+};
+
+const notifyAdmins = async ({ title, message, link = '/admin' }) => {
+    const admins = await User.find({ role: 'admin' }).select('_id').lean();
+    if (admins.length === 0) return;
+
+    await Notification.insertMany(admins.map(admin => ({
+        recipient: admin._id,
+        title,
+        message,
+        type: 'verification',
+        link
+    })));
 };
 
 exports.searchUsers = async (req, res) => {
@@ -364,6 +384,151 @@ exports.updateStreak = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: 'Error updating streak' });
+    }
+};
+
+exports.resubmitTherapistVerification = async (req, res) => {
+    try {
+        if (req.user.role !== 'therapist') {
+            return res.status(403).json({ message: 'Only therapists can resubmit verification' });
+        }
+
+        const {
+            profession,
+            location,
+            consultationFees,
+            languages,
+            licenseNumber,
+            bio
+        } = req.body;
+
+        const verificationDocuments = [];
+        if (req.files) {
+            req.files.forEach(file => {
+                verificationDocuments.push(file.path || file.url);
+            });
+        }
+
+        if (verificationDocuments.length === 0) {
+            return res.status(400).json({ message: 'Please upload at least one verification document' });
+        }
+
+        const updates = {
+            verificationStatus: 'pending',
+            verificationRejectionReason: '',
+            verificationReviewedBy: null,
+            verificationReviewedAt: null,
+            verificationDocuments
+        };
+
+        if (profession !== undefined) updates.profession = profession || null;
+        if (location !== undefined) updates.location = location || null;
+        if (consultationFees !== undefined) {
+            updates.consultationFees = consultationFees ? Number(consultationFees) : null;
+        }
+        if (licenseNumber !== undefined) updates.licenseNumber = licenseNumber || null;
+        if (bio !== undefined) updates.bio = bio || '';
+        const parsedLanguages = parseLanguages(languages);
+        if (parsedLanguages !== undefined) updates.languages = parsedLanguages;
+
+        const user = await User.findByIdAndUpdate(req.user._id, updates, {
+            new: true,
+            runValidators: true
+        }).select('-password');
+
+        await notifyAdmins({
+            title: 'Therapist verification resubmitted',
+            message: `${user.name} resubmitted therapist verification documents.`,
+            link: '/admin'
+        });
+
+        res.json({
+            message: 'Verification resubmitted successfully',
+            user
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error resubmitting verification' });
+    }
+};
+
+exports.applyForTherapist = async (req, res) => {
+    try {
+        if (req.user.role === 'admin') {
+            return res.status(400).json({ message: 'Admin accounts cannot apply as therapists' });
+        }
+
+        if (req.user.role === 'therapist' && req.user.verificationStatus === 'approved') {
+            return res.status(400).json({ message: 'You are already an approved therapist' });
+        }
+
+        if (req.user.verificationStatus === 'pending') {
+            return res.status(400).json({ message: 'Your therapist application is already pending review' });
+        }
+
+        const {
+            profession,
+            location,
+            consultationFees,
+            languages,
+            licenseNumber,
+            bio
+        } = req.body;
+
+        if (!profession || !location || !consultationFees) {
+            return res.status(400).json({ message: 'Profession, location, and fees are required' });
+        }
+
+        const verificationDocuments = [];
+        if (req.files) {
+            req.files.forEach(file => {
+                verificationDocuments.push(file.path || file.url);
+            });
+        }
+
+        if (verificationDocuments.length === 0) {
+            return res.status(400).json({ message: 'Please upload verification documents' });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                role: 'therapist',
+                profession,
+                location,
+                consultationFees: Number(consultationFees),
+                languages: parseLanguages(languages) || [],
+                licenseNumber: licenseNumber || null,
+                bio: bio || '',
+                verificationStatus: 'pending',
+                verificationDocuments,
+                verificationRejectionReason: '',
+                verificationReviewedBy: null,
+                verificationReviewedAt: null
+            },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        await Promise.all([
+            Notification.create({
+                recipient: user._id,
+                title: 'Therapist application submitted',
+                message: 'Your therapist application is now pending admin review.',
+                type: 'verification',
+                link: '/verification-pending'
+            }),
+            notifyAdmins({
+                title: 'New therapist application',
+                message: `${user.name} applied to work as a therapist.`,
+                link: '/admin'
+            })
+        ]);
+
+        res.json({
+            message: 'Therapist application submitted',
+            user
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error submitting therapist application' });
     }
 };
 

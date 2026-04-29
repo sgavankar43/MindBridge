@@ -164,7 +164,8 @@ exports.login = async (req, res) => {
         if (user.role === 'therapist' && user.verificationStatus !== 'approved') {
             return res.status(403).json({
                 message: `Your account status is ${user.verificationStatus}. Please wait for admin approval.`,
-                verificationStatus: user.verificationStatus
+                verificationStatus: user.verificationStatus,
+                verificationRejectionReason: user.verificationRejectionReason || ''
             });
         }
 

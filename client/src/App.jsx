@@ -14,6 +14,7 @@ import Profile from './pages/Profile'
 import Game from './pages/Game'
 import Community from './pages/Community'
 import Settings from './pages/Settings'
+import ApplyTherapist from './pages/ApplyTherapist'
 import GameMemoryMatch from './pages/games/gameMemoryMatch'
 import GameBubblePop from './pages/games/gameBubblePop'
 import GameTileSlider from './pages/games/gameTileSlider'
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />
         <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/apply-therapist" element={<ProtectedRoute><ApplyTherapist /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/gameMemoryMatch" element={<ProtectedRoute><GameMemoryMatch /></ProtectedRoute>} />
         <Route path="/gameBubblePop" element={<ProtectedRoute><GameBubblePop /></ProtectedRoute>} />

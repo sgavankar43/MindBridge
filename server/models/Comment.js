@@ -19,7 +19,28 @@ const commentSchema = new mongoose.Schema({
     likes: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }]
+    }],
+    moderationStatus: {
+        type: String,
+        enum: ['active', 'hidden', 'deleted'],
+        default: 'active',
+        index: true
+    },
+    moderationReason: {
+        type: String,
+        trim: true,
+        maxlength: [300, 'Moderation reason cannot exceed 300 characters'],
+        default: ''
+    },
+    moderatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    moderatedAt: {
+        type: Date,
+        default: null
+    }
 }, {
     timestamps: true
 });

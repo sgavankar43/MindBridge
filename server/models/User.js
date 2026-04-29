@@ -62,6 +62,21 @@ const userSchema = new mongoose.Schema({
     verificationDocuments: [{
         type: String // URLs to uploaded documents
     }],
+    verificationRejectionReason: {
+        type: String,
+        trim: true,
+        maxlength: [500, 'Rejection reason cannot exceed 500 characters'],
+        default: ''
+    },
+    verificationReviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+    verificationReviewedAt: {
+        type: Date,
+        default: null
+    },
     licenseNumber: {
         type: String,
         default: null
