@@ -164,11 +164,14 @@ app.use('/api/users', userRoutes);
 const postRoutes = require('./routes/posts');
 app.use('/api/posts', postRoutes);
 
-// const adminRoutes = require('./routes/admin');
-// app.use('/api/admin', adminRoutes);
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
 
 const messageRoutes = require('./routes/messages');
 app.use('/api/messages', messageRoutes);
+
+const notificationRoutes = require('./routes/notifications');
+app.use('/api/notifications', notificationRoutes);
 
 // Wallet routes — walletLimiter on checkout + transfer (tight in prod, relaxed in dev)
 const walletRoutes = require('./routes/wallet');

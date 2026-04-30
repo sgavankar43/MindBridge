@@ -1,6 +1,13 @@
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 
+const activeModerationFilter = {
+    $or: [
+        { moderationStatus: 'active' },
+        { moderationStatus: { $exists: false } }
+    ]
+};
+
 exports.createPost = async (req, res) => {
     try {
         const { content, hashtags } = req.body;
@@ -32,7 +39,7 @@ exports.createPost = async (req, res) => {
 exports.getPosts = async (req, res) => {
     try {
         const { search, topic } = req.query;
-        let query = {};
+        let query = { ...activeModerationFilter };
 
         if (search) {
             query.$text = { $search: search };
@@ -46,6 +53,7 @@ exports.getPosts = async (req, res) => {
             .populate('author', 'name avatar role profession')
             .populate({
                 path: 'comments',
+                match: activeModerationFilter,
                 populate: {
                     path: 'author',
                     select: 'name avatar'
@@ -63,7 +71,7 @@ exports.getPosts = async (req, res) => {
 
 exports.toggleLike = async (req, res) => {
     try {
-        const post = await Post.findById(req.params.id);
+        const post = await Post.findOne({ _id: req.params.id, ...activeModerationFilter });
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
@@ -85,7 +93,7 @@ exports.toggleLike = async (req, res) => {
 exports.addComment = async (req, res) => {
     try {
         const { content } = req.body;
-        const post = await Post.findById(req.params.id);
+        const post = await Post.findOne({ _id: req.params.id, ...activeModerationFilter });
 
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
@@ -112,7 +120,7 @@ exports.addComment = async (req, res) => {
 
 exports.getComments = async (req, res) => {
     try {
-        const comments = await Comment.find({ post: req.params.id })
+        const comments = await Comment.find({ post: req.params.id, ...activeModerationFilter })
             .populate('author', 'name avatar')
             .sort({ createdAt: 1 });
         res.json(comments);

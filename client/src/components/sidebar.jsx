@@ -1,15 +1,17 @@
 import {
   Home, LayoutGrid, Heart, LogOut, Calendar,
-  Users, Clock, Settings, Gamepad2, MessageCircle, User, X, Wallet
+  Users, Clock, Settings, Gamepad2, MessageCircle, User, X, Wallet, Shield, Briefcase
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSidebar } from "@/context/SidebarContext";
+import { useUser } from "@/context/UserContext";
 
 
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isSidebarOpen, closeSidebar } = useSidebar();
+  const { user } = useUser();
 
   const isActive = (path) => location.pathname === path;
 
@@ -27,16 +29,24 @@ export function Sidebar() {
   // ----------------------------------------------
   const items = [
     { path: "/dashboard", icon: Home, label: "Dashboard" },
-    { path: "/home", icon: LayoutGrid, label: "Home" },
+    // { path: "/home", icon: LayoutGrid, label: "Home" },
     { path: "/ai-chat", icon: MessageCircle, label: "AI Chat" },
-    { path: "/profile", icon: User, label: "Profile" },
+    // { path: "/profile", icon: User, label: "Profile" },
     { path: "/game", icon: Gamepad2, label: "Games", active: isActiveGame },
     { path: "/calendar", icon: Calendar, label: "Calendar" },
     { path: "/community", icon: Users, label: "Community" },
     { path: "/favorites", icon: Heart, label: "Favorites" },
-    { path: "/time", icon: Clock, label: "Time" },
+    // { path: "/time", icon: Clock, label: "Time" },
     { path: "/wallet", icon: Wallet, label: "Wallet" },
   ];
+
+  if (user?.role === "user") {
+    items.push({ path: "/apply-therapist", icon: Briefcase, label: "Apply Therapist" });
+  }
+
+  if (user?.role === "admin") {
+    items.push({ path: "/admin", icon: Shield, label: "Admin" });
+  }
 
   const settingsItem = { path: "/settings", icon: Settings, label: "Settings" };
   const logoutItem = { path: "/login", icon: LogOut, label: "Logout" };
@@ -96,7 +106,7 @@ export function Sidebar() {
         <div className="flex-1" />
 
         {/* SETTINGS BUTTON */}
-        <div className="relative group">
+        {/* <div className="relative group">
           <button
             onClick={() => handleNavigate(settingsItem.path)}
             className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center hover:bg-gray-100 hover:scale-110 transition-all duration-200"
@@ -104,14 +114,14 @@ export function Sidebar() {
             <settingsItem.icon className="w-5 h-5 text-gray-500" />
           </button>
           {/* Tooltip */}
-          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
+          {/* <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
             {settingsItem.label}
             <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
           </div>
-        </div>
+        </div> */}
 
         {/* LOGOUT BUTTON */}
-        <div className="relative group mb-2">
+        {/* <div className="relative group mb-2">
           <button
             onClick={() => handleNavigate(logoutItem.path)}
             className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center hover:bg-red-50 hover:scale-110 transition-all duration-200"
@@ -119,11 +129,11 @@ export function Sidebar() {
             <logoutItem.icon className="w-5 h-5 text-gray-500" />
           </button>
           {/* Tooltip */}
-          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
+          {/* <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
             {logoutItem.label}
             <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
           </div>
-        </div>
+        </div> */}
       </div>
     </>
   );

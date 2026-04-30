@@ -3,6 +3,7 @@ import { Search, Bell, Menu, X, LogOut, User } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useSidebar } from "@/context/SidebarContext"
 import { useUser } from "../context/UserContext"
+import API_BASE_URL, { apiRequest } from "../config/api"
 
 export function Header() {
   const { toggleSidebar } = useSidebar()
@@ -10,54 +11,63 @@ export function Header() {
   const navigate = useNavigate()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const notificationRef = useRef(null)
   const profileRef = useRef(null)
 
-  // Dummy notifications data
-  const notifications = [
-    {
-      id: 1,
-      title: "New Message",
-      message: "Sarah Johnson sent you a message",
-      time: "2 min ago",
-      unread: true,
-      type: "message"
-    },
-    {
-      id: 2,
-      title: "Workout Reminder",
-      message: "Time for your evening workout session",
-      time: "1 hour ago",
-      unread: true,
-      type: "reminder"
-    },
-    {
-      id: 3,
-      title: "Goal Achieved",
-      message: "Congratulations! You've reached your weekly goal",
-      time: "3 hours ago",
-      unread: false,
-      type: "achievement"
-    },
-    {
-      id: 4,
-      title: "Friend Request",
-      message: "Mike Chen wants to connect with you",
-      time: "5 hours ago",
-      unread: false,
-      type: "social"
-    },
-    {
-      id: 5,
-      title: "System Update",
-      message: "New features are now available",
-      time: "1 day ago",
-      unread: false,
-      type: "system"
+  const fetchNotifications = async () => {
+    try {
+      const data = await apiRequest(`${API_BASE_URL}/api/notifications?limit=20`)
+      setNotifications(data.notifications || [])
+      setUnreadCount(data.unreadCount || 0)
+    } catch {
+      setNotifications([])
+      setUnreadCount(0)
     }
-  ]
+  }
 
-  const unreadCount = notifications.filter(n => n.unread).length
+  useEffect(() => {
+    if (user?._id) fetchNotifications()
+  }, [user?._id])
+
+  const formatNotificationTime = (value) => {
+    if (!value) return ""
+    const diffMs = Date.now() - new Date(value).getTime()
+    const diffMinutes = Math.max(0, Math.floor(diffMs / 60000))
+    if (diffMinutes < 1) return "Just now"
+    if (diffMinutes < 60) return `${diffMinutes} min ago`
+    const diffHours = Math.floor(diffMinutes / 60)
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`
+    return new Date(value).toLocaleDateString()
+  }
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      if (!notification.read) {
+        await apiRequest(`${API_BASE_URL}/api/notifications/${notification._id}/read`, { method: 'PUT' })
+        setNotifications(prev => prev.map(item => item._id === notification._id ? { ...item, read: true } : item))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+      }
+    } catch {
+      // Keep navigation responsive even if marking read fails
+    }
+
+    if (notification.link) {
+      navigate(notification.link)
+      setShowNotifications(false)
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await apiRequest(`${API_BASE_URL}/api/notifications/read-all`, { method: 'PUT' })
+      setNotifications(prev => prev.map(item => ({ ...item, read: true })))
+      setUnreadCount(0)
+    } catch {
+      // Ignore transient failures
+    }
+  }
 
   // Close panels when clicking outside
   useEffect(() => {
@@ -158,12 +168,13 @@ export function Header() {
                   <div className="divide-y divide-gray-100">
                     {notifications.map((notification) => (
                       <div
-                        key={notification.id}
-                        className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${notification.unread ? 'bg-blue-50/50' : ''
+                        key={notification._id}
+                        onClick={() => handleNotificationClick(notification)}
+                        className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50' : ''
                           }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${notification.unread ? 'bg-[#e74c3c]' : 'bg-transparent'
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notification.read ? 'bg-[#e74c3c]' : 'bg-transparent'
                             }`} />
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold text-[#2d2d2d] mb-1">
@@ -173,7 +184,7 @@ export function Header() {
                               {notification.message}
                             </p>
                             <span className="text-xs text-gray-400">
-                              {notification.time}
+                              {formatNotificationTime(notification.createdAt)}
                             </span>
                           </div>
                         </div>
@@ -186,7 +197,10 @@ export function Header() {
               {/* Footer */}
               {notifications.length > 0 && (
                 <div className="p-3 border-t border-gray-100 bg-gray-50">
-                  <button className="w-full text-sm text-[#e74c3c] font-medium hover:text-[#c0392b] transition-colors">
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="w-full text-sm text-[#e74c3c] font-medium hover:text-[#c0392b] transition-colors"
+                  >
                     Mark all as read
                   </button>
                 </div>
