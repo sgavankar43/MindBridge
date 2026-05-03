@@ -119,6 +119,14 @@ export default function Community() {
                 const queryParams = new URLSearchParams({ search: searchQuery })
                 const data = await apiRequest(`${API_BASE_URL}/api/posts?${queryParams}`)
                 setPosts(Array.isArray(data) ? data : [])
+                
+                if (searchQuery) {
+                    const userParams = new URLSearchParams({ query: searchQuery })
+                    const userData = await apiRequest(`${API_BASE_URL}/api/users/search?${userParams}`)
+                    setUsers(Array.isArray(userData) ? userData : [])
+                } else {
+                    setUsers([])
+                }
             } else {
                 const queryParams = new URLSearchParams({
                     query: searchQuery,
@@ -411,6 +419,26 @@ export default function Community() {
                                 <div className="text-center py-10 text-gray-500">Loading...</div>
                             ) : activeTab === 'posts' ? (
                                 <div className="space-y-4">
+                                    {searchQuery && users.length > 0 && (
+                                        <div className="mb-6">
+                                            <h3 className="text-lg font-semibold text-[#2d2d2d] mb-4">People</h3>
+                                            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                                                {users.map(u => (
+                                                    <div 
+                                                        key={u._id} 
+                                                        className="bg-white rounded-2xl p-4 shadow-sm min-w-[160px] flex-shrink-0 cursor-pointer hover:shadow-md transition-shadow text-center"
+                                                        onClick={() => navigate(`/profile?id=${u._id}`)}
+                                                    >
+                                                        <div className="w-14 h-14 bg-[#e74c3c] rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
+                                                            {u.name?.[0] || 'U'}
+                                                        </div>
+                                                        <h4 className="font-semibold text-sm text-[#2d2d2d] truncate">{u.name}</h4>
+                                                        <p className="text-xs text-gray-500 truncate capitalize">{u.profession || u.role}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                     {posts.length === 0 ? (
                                         <div className="text-center py-10 text-gray-500 bg-white rounded-2xl shadow-sm">
                                             <p>No posts found.</p>

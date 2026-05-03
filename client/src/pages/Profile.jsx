@@ -8,7 +8,7 @@ import {
   Mail, Phone, Linkedin, Github, Globe,
   Camera, Edit2, MapPin, Briefcase,
   Award, Target, CheckCircle, Shield, Settings,
-  UserPlus, UserMinus
+  UserPlus, UserMinus, FileText, AlertCircle
 } from "lucide-react"
 
 export default function Profile() {
@@ -23,6 +23,19 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("posts")
   const [loading, setLoading] = useState(true)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [showRemarkModal, setShowRemarkModal] = useState(false)
+  const [remarkText, setRemarkText] = useState("")
+  const [isEmergency, setIsEmergency] = useState(false)
+  const [submittingRemark, setSubmittingRemark] = useState(false)
+  const [showUsersModal, setShowUsersModal] = useState(false)
+  const [modalUsersList, setModalUsersList] = useState([])
+  const [modalTitle, setModalTitle] = useState("")
+
+  const openUsersModal = (title, usersList) => {
+    setModalTitle(title)
+    setModalUsersList(usersList || [])
+    setShowUsersModal(true)
+  }
 
   const isOwnProfile = !searchParams.get("id") || searchParams.get("id") === currentUser?._id
 
@@ -38,7 +51,7 @@ export default function Profile() {
       setComments(data.comments)
 
       if (currentUser && data.user.followers) {
-        setIsFollowing(data.user.followers.includes(currentUser._id))
+        setIsFollowing(data.user.followers.some(f => (f._id || f) === currentUser._id))
       }
     } catch (error) {
       console.error("Error fetching profile:", error)
@@ -57,11 +70,40 @@ export default function Profile() {
       setProfileData(prev => ({
         ...prev,
         followers: data.isFollowing
-          ? [...prev.followers, currentUser._id]
-          : prev.followers.filter(id => id !== currentUser._id)
+          ? [...prev.followers, { _id: currentUser._id, name: currentUser.name, role: currentUser.role, profession: currentUser.profession }]
+          : prev.followers.filter(f => (f._id || f) !== currentUser._id)
       }))
     } catch (error) {
       console.error("Error toggling follow:", error)
+    }
+  }
+
+  const handleAddRemark = async (e) => {
+    e.preventDefault()
+    if (!remarkText.trim()) return
+
+    try {
+      setSubmittingRemark(true)
+      const data = await apiRequest(`${API_BASE_URL}/api/users/${profileId}/remarks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ remark: remarkText, isEmergency })
+      })
+
+      setProfileData(prev => ({
+        ...prev,
+        medicalRemarks: [...(prev.medicalRemarks || []), data.remark]
+      }))
+
+      setShowRemarkModal(false)
+      setRemarkText("")
+      setIsEmergency(false)
+    } catch (error) {
+      console.error("Error adding remark:", error)
+    } finally {
+      setSubmittingRemark(false)
     }
   }
 
@@ -106,13 +148,19 @@ export default function Profile() {
                 )}
 
                 <div className="flex justify-center md:justify-start gap-8 mb-6">
-                  <div className="text-center">
+                  <div 
+                    className="text-center cursor-pointer hover:opacity-80 transition-opacity" 
+                    onClick={() => openUsersModal("Followers", profileData.followers)}
+                  >
                     <span className="block font-bold text-lg">{profileData.followers?.length || 0}</span>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">Followers</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide hover:underline">Followers</span>
                   </div>
-                  <div className="text-center">
+                  <div 
+                    className="text-center cursor-pointer hover:opacity-80 transition-opacity" 
+                    onClick={() => openUsersModal("Following", profileData.following)}
+                  >
                     <span className="block font-bold text-lg">{profileData.following?.length || 0}</span>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">Following</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide hover:underline">Following</span>
                   </div>
                   <div className="text-center">
                     <span className="block font-bold text-lg">{posts.length}</span>
@@ -139,6 +187,15 @@ export default function Profile() {
                       <Mail className="w-4 h-4" />
                       Message
                     </button>
+                    {currentUser?.role === 'therapist' && (
+                      <button
+                        onClick={() => setShowRemarkModal(true)}
+                        className="px-6 py-2 border border-[#e74c3c] text-[#e74c3c] rounded-xl font-medium hover:bg-red-50 transition-colors flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Remark
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -187,6 +244,15 @@ export default function Profile() {
                   >
                     About
                   </button>
+                  {(isOwnProfile || currentUser?.role === 'therapist') && (
+                    <button
+                      onClick={() => setActiveTab('remarks')}
+                      className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'remarks' ? 'border-[#e74c3c] text-[#e74c3c]' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                      Medical Remarks
+                    </button>
+                  )}
                 </div>
 
                 <div className="p-6">
@@ -223,6 +289,36 @@ export default function Profile() {
                             <p className="text-xs text-gray-400">
                               on post by {comment.post?.author?.name || 'Unknown'} • {new Date(comment.createdAt).toLocaleDateString()}
                             </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'remarks' && (
+                    <div className="space-y-6">
+                      {(!profileData.medicalRemarks || profileData.medicalRemarks.length === 0) ? (
+                        <p className="text-center text-gray-500">No medical remarks yet.</p>
+                      ) : (
+                        profileData.medicalRemarks.map((remark, idx) => (
+                          <div key={idx} className="border-b border-gray-100 last:border-0 pb-6 last:pb-0">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-[#e74c3c] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                  {remark.therapistId?.name?.[0] || 'T'}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-sm">{remark.therapistId?.name || 'Unknown Therapist'}</p>
+                                  <p className="text-xs text-gray-500">{new Date(remark.createdAt).toLocaleDateString()}</p>
+                                </div>
+                              </div>
+                              {remark.isEmergency && (
+                                <span className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                                  <AlertCircle className="w-3 h-3" /> Emergency
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-800 text-sm mt-3">{remark.remark}</p>
                           </div>
                         ))
                       )}
@@ -296,6 +392,103 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Remark Modal */}
+      {showRemarkModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-xl">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-800">Add Medical Remark</h3>
+              <button onClick={() => setShowRemarkModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleAddRemark} className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Remark Description
+                </label>
+                <textarea
+                  required
+                  rows="4"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#e74c3c]/20 focus:border-[#e74c3c] transition-all resize-none"
+                  placeholder="Enter medical remarks or observations..."
+                  value={remarkText}
+                  onChange={(e) => setRemarkText(e.target.value)}
+                ></textarea>
+              </div>
+              <div className="mb-6 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isEmergency"
+                  className="w-5 h-5 text-[#e74c3c] rounded border-gray-300 focus:ring-[#e74c3c]"
+                  checked={isEmergency}
+                  onChange={(e) => setIsEmergency(e.target.checked)}
+                />
+                <label htmlFor="isEmergency" className="text-sm font-medium text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" /> Mark as Emergency Case
+                </label>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowRemarkModal(false)}
+                  className="px-6 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRemark}
+                  className="px-6 py-2.5 rounded-xl font-medium bg-[#e74c3c] text-white hover:bg-[#c0392b] transition-colors disabled:opacity-50"
+                >
+                  {submittingRemark ? 'Saving...' : 'Save Remark'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Users Modal (Followers/Following) */}
+      {showUsersModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-800">{modalTitle}</h3>
+              <button onClick={() => setShowUsersModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">
+                &times;
+              </button>
+            </div>
+            <div className="p-2 overflow-y-auto flex-1">
+              {modalUsersList.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No {modalTitle.toLowerCase()} yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {modalUsersList.map((u, idx) => (
+                    <div 
+                      key={u._id || idx} 
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors"
+                      onClick={() => {
+                        setShowUsersModal(false)
+                        navigate(`/profile?id=${u._id}`)
+                      }}
+                    >
+                      <div className="w-10 h-10 bg-[#e74c3c] rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold">
+                        {u.name?.[0] || 'U'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-[#2d2d2d] truncate">{u.name || 'Unknown User'}</h4>
+                        <p className="text-xs text-gray-500 truncate capitalize">{u.profession || u.role || 'user'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

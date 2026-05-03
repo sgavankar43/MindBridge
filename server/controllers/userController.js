@@ -127,7 +127,11 @@ exports.getProfile = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const user = await User.findById(id).select('-password');
+        const user = await User.findById(id)
+            .select('-password')
+            .populate('medicalRemarks.therapistId', 'name avatar role')
+            .populate('followers', 'name avatar role profession')
+            .populate('following', 'name avatar role profession');
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const posts = await Post.find({ author: id }).sort({ createdAt: -1 });
@@ -529,6 +533,55 @@ exports.applyForTherapist = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: 'Error submitting therapist application' });
+    }
+};
+
+exports.addMedicalRemark = async (req, res) => {
+    try {
+        if (req.user.role !== 'therapist') {
+            return res.status(403).json({ message: 'Only therapists can add medical remarks' });
+        }
+
+        const { id } = req.params;
+        const { remark, isEmergency } = req.body;
+
+        if (!remark || typeof remark !== 'string' || !remark.trim()) {
+            return res.status(400).json({ message: 'Remark is required' });
+        }
+
+        const targetUser = await User.findById(id);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+
+        targetUser.medicalRemarks.push({
+            therapistId: req.user._id,
+            remark: remark.trim(),
+            isEmergency: Boolean(isEmergency),
+            createdAt: new Date()
+        });
+
+        await targetUser.save();
+
+        // If it's an emergency, notify admins (or similar logic could be added here)
+        if (isEmergency) {
+            await notifyAdmins({
+                title: 'Emergency Medical Remark',
+                message: `An emergency remark was added for user ${targetUser.name} by therapist ${req.user.name}.`,
+                link: `/profile?id=${targetUser._id}`
+            });
+        }
+
+        // Return the newly added remark populated
+        const updatedUser = await User.findById(id).populate('medicalRemarks.therapistId', 'name avatar role');
+        const newRemark = updatedUser.medicalRemarks[updatedUser.medicalRemarks.length - 1];
+
+        res.json({
+            message: 'Medical remark added successfully',
+            remark: newRemark
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error adding medical remark' });
     }
 };
 

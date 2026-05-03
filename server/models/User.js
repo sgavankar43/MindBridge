@@ -180,6 +180,12 @@ const userSchema = new mongoose.Schema({
             default: 0
         }
     },
+    medicalRemarks: [{
+        therapistId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        remark: { type: String, required: true },
+        isEmergency: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+    }],
     walletBalance: {
         type: Number,
         default: 0,

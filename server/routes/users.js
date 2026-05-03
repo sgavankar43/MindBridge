@@ -30,4 +30,7 @@ router.get('/:id/profile', authenticateToken, userController.getProfile);
 // Follow/Unfollow
 router.put('/:id/follow', authenticateToken, userController.toggleFollow);
 
+// Medical Remarks (Therapists only)
+router.post('/:id/remarks', authenticateToken, userController.addMedicalRemark);
+
 module.exports = router;
